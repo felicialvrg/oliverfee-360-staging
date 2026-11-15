@@ -46,7 +46,8 @@ const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) 
 
 export function parseFilters(sp: Record<string, string | string[] | undefined>): ProspectFilters {
   const state = one(sp.state).toUpperCase();
-  const years = Number(one(sp.minYears));
+  const rawYears = one(sp.minYears);
+  const years = rawYears === "" ? 3 : Number(rawYears);
   const page = Number(one(sp.page));
   return {
     state: /^[A-Z]{2}$/.test(state) ? state : "",
@@ -92,9 +93,9 @@ function where(f: ProspectFilters) {
 }
 
 const ORDER: Record<ProspectFilters["sort"], string> = {
-  mcs150: "mcs150_date ASC, add_date ASC", // longest without an MCS-150 update first
-  oldest: "add_date ASC",
-  newest: "add_date DESC",
+  mcs150: "mcs150_date ASC, add_date ASC, dot_number ASC", // longest without an MCS-150 update first
+  oldest: "add_date ASC, dot_number ASC",
+  newest: "add_date DESC, dot_number ASC",
 };
 
 const FIELDS = [
