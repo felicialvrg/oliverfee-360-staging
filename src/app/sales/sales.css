@@ -12,3 +12,5 @@
 
 /* Keep owner sales navigation reachable on narrow screens as well. */
 @media(max-width:900px){.owner-content>.sales-shell{grid-template-columns:minmax(0,1fr)}}
+
+.sales-actions[aria-label="Sales assistance language"] button[aria-pressed="true"]{background:#242224;color:#efd6a4;border-color:#a27d3c;box-shadow:inset 0 -3px #d74483}
