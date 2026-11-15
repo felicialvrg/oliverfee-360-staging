@@ -47,7 +47,7 @@ export async function drainSalesOutbox(){
    html=inviteEmailHtml(item.kind==='representative-invite'?'OliverFee 360 Sales Representative':'your OliverFee 360 membership',link);
    if(item.kind==='representative-invite')html+='<p>Your administrator must activate your representative record. After password setup, use the dedicated sales login at '+salesOrigin()+'/sales/login.</p>';
   }
-  if(!await sendEmail(item.recipient,subject,html,idempotency))throw new Error('Email provider did not confirm acceptance.');
+  if(!await sendEmail(item.recipient,subject,html,idempotency,item.kind==='representative-invite'?{replyTo:'oliverfee360@gmail.com'}:undefined))throw new Error('Email provider did not confirm acceptance.');
   const {error:saved}=await service.from('sales_outbox').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:null}).eq('id',item.id);if(saved)throw new Error('Delivery acceptance could not be recorded.');sent++;
  }catch{
   failed++;await service.from('sales_outbox').update({status:'failed',lease_until:new Date(Date.now()+60000).toISOString(),last_error:'Notification not confirmed. Check provider configuration and retry.'}).eq('id',item.id);

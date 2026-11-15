@@ -2,7 +2,7 @@ import "server-only";
 
 // Sends email through Resend (https://resend.com). If no API key is set,
 // it does nothing and returns false, and the app shows the link to copy instead.
-export async function sendEmail(to: string, subject: string, html: string, idempotencyKey?:string): Promise<boolean> {
+export async function sendEmail(to: string, subject: string, html: string, idempotencyKey?:string, options?:{replyTo?:string}): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
   if (!key || !from) return false;
@@ -10,7 +10,7 @@ export async function sendEmail(to: string, subject: string, html: string, idemp
     method: "POST",
     signal: AbortSignal.timeout(15000),
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", ...(idempotencyKey?{"Idempotency-Key":idempotencyKey}:{}) },
-    body: JSON.stringify({ from, to, subject, html }),
+    body: JSON.stringify({ from, to, subject, html, ...(options?.replyTo?{reply_to:options.replyTo}:{}) }),
   });
   if (!res.ok) console.error("Resend error", res.status);
   return res.ok;
