@@ -114,6 +114,20 @@
       "steps": "Open preview and follow the real screen navigation."
     },
     {
+      "id": "route:/admin/training",
+      "path": "/admin/training",
+      "label": "Training video",
+      "group": "Employee training",
+      "access": "Existing verified production owner",
+      "role": "owner",
+      "status": "live",
+      "source": "src/app/admin/training/page.tsx",
+      "previewPath": "/admin/training",
+      "scenario": "populated",
+      "setup": null,
+      "steps": "Open preview and follow the real screen navigation."
+    },
+    {
       "id": "route:/admin-lab",
       "path": "/admin-lab",
       "label": "Local test-owner login",
@@ -165,6 +179,20 @@
       "status": "live",
       "source": "src/app/api/stripe/sales-webhook/route.ts",
       "previewPath": "/api/stripe/sales-webhook",
+      "scenario": "populated",
+      "setup": null,
+      "steps": "Open preview and follow the real screen navigation."
+    },
+    {
+      "id": "route:/api/training",
+      "path": "/api/training",
+      "label": "Private training commands",
+      "group": "Employee training",
+      "access": "Verified owner or active assigned employee; session and same origin",
+      "role": "salesperson",
+      "status": "live",
+      "source": "src/app/api/training/route.ts",
+      "previewPath": "/api/training",
       "scenario": "populated",
       "setup": null,
       "steps": "Open preview and follow the real screen navigation."
@@ -361,6 +389,20 @@
       "status": "live",
       "source": "src/app/sales/payment-result/page.tsx",
       "previewPath": "/sales/payment-result",
+      "scenario": "populated",
+      "setup": null,
+      "steps": "Open preview and follow the real screen navigation."
+    },
+    {
+      "id": "route:/sales/training",
+      "path": "/sales/training",
+      "label": "Assigned training",
+      "group": "Employee training",
+      "access": "Active representative; assigned approved lessons only",
+      "role": "salesperson",
+      "status": "live",
+      "source": "src/app/sales/training/page.tsx",
+      "previewPath": "/sales/training",
       "scenario": "populated",
       "setup": null,
       "steps": "Open preview and follow the real screen navigation."
