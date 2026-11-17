@@ -28,7 +28,9 @@ export async function completeSalesSetup(raw:Record<string,unknown>){
  if(lookupError)throw new SalesError('Username availability could not be checked. Try again.',503);
  if(matches?.some(p=>p.user_id!==user.id))throw new SalesError('That username is taken. Choose another.',409);
  const {error:passwordError}=await client.auth.updateUser({password});
- if(passwordError)throw new SalesError('Your password could not be saved. Request a new setup link if needed.',400);
+ // A retry may follow a saved password and an interrupted username update.
+ // Supabase confirms same_password when the chosen password is already current.
+ if(passwordError&&passwordError.code!=='same_password')throw new SalesError('Your password could not be saved. Request a new setup link if needed.',400);
  // Compare status and code so a concurrent owner suspension/removal wins.
  const {data:saved,error:saveError}=await service.from('sales_representatives').update({rep_code:username,status:'active',updated_at:new Date().toISOString()}).eq('user_id',user.id).eq('status',rep.status).eq('rep_code',rep.rep_code).select('user_id').maybeSingle();
  if(saveError||!saved)throw new SalesError('Your password was saved, but username setup could not finish. Retry or contact the owner.',409);
