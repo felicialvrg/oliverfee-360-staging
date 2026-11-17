@@ -13,5 +13,5 @@ test('50,000-row large file preserves every source column and produces bounded s
 test('mapping, invalid-first duplicate, malformed values and oversized metadata never silently discard leads',()=>{
  const headers=['Business','DOT','Email','MC','Address'];const rows=[['Bad','101','bad','1','x'],['Valid','101','valid@example.test','2','x'],['Duplicate','101','','3','x'],['=FORMULA','102','bad','4','x'],['Long','103','','5','x'.repeat(4100)]];
  const plan=planImport(headers,rows,{company_name:0,usdot:1,email:2});assert.equal(plan.valid,1);assert.equal(plan.duplicates,1);assert.equal(plan.issues.length,4);assert.equal(plan.total,5);assert.ok(importErrorReport(plan).includes("'=FORMULA"));assert.ok(importErrorReport(plan).includes('x'.repeat(4100)));
- assert.throws(()=>planImport(headers,rows,{company_name:0,usdot:0}),/only one/);assert.throws(()=>planImport(headers,rows,{}),/Map/);assert.throws(()=>readImport('name,name\na,b'),/unique/);
+ assert.throws(()=>planImport(headers,rows,{company_name:0,usdot:0}),/only one/);assert.throws(()=>planImport(headers,rows,{}),/CSV headers must include/);assert.throws(()=>readImport('name,name\na,b'),/unique/);
 });

@@ -12,7 +12,7 @@ export function readImport(csv:string){const all=parseCsv(csv,IMPORT_LIMITS),hea
 export function defaultMapping(headers:string[]):Mapping{return Object.fromEntries(IMPORT_FIELDS.map(key=>[key,headers.findIndex(h=>aliases[key].includes(h.trim().toLowerCase()))]));}
 export function planImport(headers:string[],input:string[][],mapping:Mapping):ImportPlan{
  if(input.length>IMPORT_LIMITS.maxRows)throw new SalesInputError('Import at most 50,000 rows per file.');
- if(!Number.isInteger(mapping.company_name)||Number(mapping.company_name)<0||!Number.isInteger(mapping.usdot)||Number(mapping.usdot)<0)throw new SalesInputError('Map Company name and USDOT before validating.');
+ if(!Number.isInteger(mapping.company_name)||Number(mapping.company_name)<0||!Number.isInteger(mapping.usdot)||Number(mapping.usdot)<0)throw new SalesInputError('CSV headers must include Company name (or Legal name) and USDOT (or DOT number).');
  const mapped=Object.values(mapping).filter(n=>Number(n)>=0);if(new Set(mapped).size!==mapped.length||mapped.some(n=>!Number.isInteger(n)||Number(n)>=headers.length))throw new SalesInputError('Each selected column can map to only one field.');
  const issues:ImportIssue[]=[],validRows:string[][]=[],seen=new Set<string>();let duplicates=0;
  input.forEach((cells,index)=>{try{
