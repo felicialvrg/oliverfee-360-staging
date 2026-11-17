@@ -1,4 +1,5 @@
 import 'server-only';
+import {representativeRoster} from './representative-roster';
 import {screeningConfiguration} from './dnc';
 import {SalesInputError} from './input-error';
 import {createClient} from '@/lib/supabase/server';
@@ -38,9 +39,9 @@ export async function salesData(management=false,page=0,query='',status='All'):P
   appIds.length?client.from('sales_checkout_attempts').select('id,application_id,status,checkout_url,amount_cents,plan_key').in('application_id',appIds).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null}),
   client.from('sales_commissions').select('id,application_id,rep_id,amount_cents,status').order('created_at',{ascending:false}).limit(100),
   client.from('sales_activity').select('*').order('created_at',{ascending:false}).limit(100),
-  who.owner?client.from('sales_representatives').select('*').order('name').limit(500):Promise.resolve({data:[who.rep],error:null}),
+  who.owner?representativeRoster(client):Promise.resolve({data:[who.rep],error:null}),
   who.owner?client.rpc('sales_management_metrics'):client.rpc('sales_metrics'),
-  who.owner?client.from('sales_outbox').select('id,kind,recipient,status,attempts,last_error').neq('status','sent').order('created_at').limit(100):Promise.resolve({data:[],error:null})
+  who.owner?client.from('sales_outbox').select('id,kind,recipient,status,attempts,last_error').order('created_at',{ascending:false}).limit(100):Promise.resolve({data:[],error:null})
  ]);
  if([resources,checkouts,commissions,activity,reps,metrics,outbox].some(v=>v.error))throw new SalesError('Sales records could not be loaded safely. Retry after database setup.',503);
  const screened=visible.length?await client.rpc('sales_call_permissions',{p_ids:visible.map(p=>p.id)}):{data:[],error:null};const configured=!!screeningConfiguration();const screening=screened.error?visible.map(p=>({id:p.id,allowed:false,status:p.disposition==='Do Not Contact'?'internal-dnc':'unscreened',verified_at:null})):(screened.data||[]).map((s:Record<string,unknown>)=>({...s,allowed:configured&&s.allowed,status:!configured&&s.status==='screened-clear'?'not-connected':s.status}));const slots=who.owner?await client.from('sales_team_slots').select('slot,rep_id').order('slot'):{data:[],error:null};

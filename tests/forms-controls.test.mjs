@@ -96,3 +96,15 @@ test('successful verified owner sign-in routes directly to admin instead of carr
  const e=environment(390),paths=[];
  try{const Login=component('../src/app/login/page.tsx',null,{'@/lib/config':{authConfigured:()=>true},'@/lib/supabase/client':{createClient:()=>({auth:{signInWithPassword:async()=>({error:null})}})},'@/app/actions/owner-access':{ensureOwnerAccess:async()=>({owner:true})},'next/navigation':{useRouter:()=>({replace:path=>paths.push(path),refresh(){}})}}).default;act(()=>e.root.render(React.createElement(Login)));e.input('email','oliverfee360@gmail.com');e.input('password','User-Selected-Password!');await e.click('Sign in with email');assert.equal(paths.at(-1),'/admin');assert.equal(document.querySelector('a[href="/carrier-setup"]'),null);}finally{e.close();}
 });
+
+for(const width of [390,1280])test('four account entry buttons preserve role-specific destinations at '+width+'px',async()=>{
+ const e=environment(width);
+ const expected={'Admin Sign In':'/login?next=/admin','Member Sign In':'/login?portal=member','Create an Account':'/signup','Sales Team':'/sales/login'};
+ function verify(){const nav=document.querySelector('nav[aria-label="Account access"]');assert.ok(nav);const links=[...nav.querySelectorAll('a')];assert.equal(links.length,4);for(const [label,href]of Object.entries(expected))assert.equal(links.find(a=>a.textContent===label)?.getAttribute('href'),href);}
+ try{
+  const Shell=component('../src/components/site-shell.tsx',null,{'next/navigation':{usePathname:()=>'/'}}).SiteShell;act(()=>e.root.render(React.createElement(Shell,null,'Synthetic public page')));verify();
+  for(const path of ['../src/app/login/page.tsx','../src/app/signup/page.tsx','../src/components/sales/login-form.tsx']){const Page=component(path,null).default;act(()=>e.root.render(React.createElement(Page)));verify();}
+ }finally{e.close();}
+});
+
+for(const width of [390,1280])test('Sales password setup shows dedicated login after verified save without granting activation at '+width+'px',async()=>{const e=environment(width),paths=[];try{window.history.replaceState(null,'','/set-password?portal=sales');let fail=true;const Password=component('../src/app/set-password/page.tsx',null,{'@/lib/supabase/client':{createClient:()=>({auth:{updateUser:async()=>({error:fail?Error('Synthetic rejection'):null})}})},'next/navigation':{useRouter:()=>({replace:path=>paths.push(path),refresh(){}})}}).default;act(()=>e.root.render(React.createElement(Password)));e.input('password','Synthetic-Only-Password!');e.input('confirm','Synthetic-Only-Password!');await e.click('Save password');assert.equal(document.querySelector('a[href="/sales/login"]'),null);assert.match(document.body.textContent,/Request a new link/);fail=false;await e.click('Save password');assert.match(document.body.textContent,/Sales Password Is Ready/);assert.match(document.body.textContent,/Owner activation is required/);assert.equal(document.querySelector('a[href="/sales/login"]').textContent,'Log In to OliverFee 360');assert.deepEqual(paths,[]);}finally{e.close();}});

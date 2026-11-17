@@ -27,3 +27,12 @@ test('password recovery callback supports PKCE and rejects external next redirec
  assert.match((await get('/auth/confirm')).headers.get('location'),/link-expired/);
  assert.match((await confirmation({},false)('/auth/confirm?code=test-code')).headers.get('location'),/unavailable/);
 });
+test('signup confirmation returns home while invitation password setup remains intact',async()=>{
+ const get=confirmation({async verifyOtp(){return {error:null};}});
+ assert.equal((await get('/auth/confirm?token_hash=synthetic&type=signup&next=/account')).headers.get('location'),'https://pocket-office-test.vercel.app/');
+ assert.equal((await get('/auth/confirm?token_hash=synthetic&type=invite&next=/set-password?portal=sales')).headers.get('location'),'https://pocket-office-test.vercel.app/set-password?portal=sales');
+ assert.equal(accountFlow.confirmationOrigin('http://localhost:3000','https://oliverfee360.com'),'https://oliverfee360.com');
+ assert.equal(accountFlow.confirmationOrigin('https://preview.vercel.app',undefined),'https://preview.vercel.app');
+ assert.equal(accountFlow.confirmationOrigin('https://preview.vercel.app','https://user:secret@evil.test'),'https://preview.vercel.app');
+ assert.equal(accountFlow.signupPayload('Synthetic Customer','test@example.test','SyntheticOnly123!','https://oliverfee360.com').options.emailRedirectTo,'https://oliverfee360.com/auth/confirm?next=/');
+});

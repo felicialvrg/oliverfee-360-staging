@@ -1,4 +1,8 @@
 export type AccountIdentity={role:string;carrier_id?:string|null};
+export function confirmationOrigin(requestOrigin:string,siteUrl?:string){
+ if(siteUrl){try{const url=new URL(siteUrl);if(url.protocol==="https:"&&!url.username&&!url.password)return url.origin;}catch{/* Use request origin when no valid canonical URL exists. */}}
+ return new URL(requestOrigin).origin;
+}
 export function accountDestination(profile:AccountIdentity|null){return !profile?"/login":profile.role==="admin"?"/admin":profile.carrier_id?"/app":"/account";}
 export function safeAuthPath(value:string){
  if(!value.startsWith("/")||value.startsWith("//")||/[\\\u0000-\u001f]/.test(value))return "/dashboard";
@@ -9,5 +13,5 @@ export function signupPayload(fullName:string,email:string,password:string,origi
  if(name.length<2||name.length>120)throw Error("Enter your name (2–120 characters).");
  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)||address.length>254)throw Error("Enter a valid email address.");
  if(password.length<10||password.length>128)throw Error("Use a password between 10 and 128 characters.");
- return {email:address,password,options:{emailRedirectTo:new URL("/auth/confirm?next=/account",origin).href,data:{full_name:name}}};
+ return {email:address,password,options:{emailRedirectTo:new URL("/auth/confirm?next=/",origin).href,data:{full_name:name}}};
 }

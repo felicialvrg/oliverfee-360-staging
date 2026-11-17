@@ -2,7 +2,7 @@
 
 import {usePreview} from "@/components/admin/preview-runtime";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Brand } from "@/components/site-shell";
 
@@ -11,6 +11,8 @@ export default function SetPasswordPage() {
   const router = useRouter();const preview=usePreview();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [salesSetup,setSalesSetup]=useState(false),[saved,setSaved]=useState(false);
+  useEffect(()=>setSalesSetup(new URLSearchParams(window.location.search).get('portal')==='sales'),[]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,6 +26,7 @@ export default function SetPasswordPage() {
     try {
       const {error}=await createClient().auth.updateUser({password});
       if(error)throw Error("This password link could not be used. Request a new link and try again.");
+      if(salesSetup){setSaved(true);return;}
       router.replace("/dashboard");
       router.refresh();
     } catch(e) {
@@ -31,6 +34,7 @@ export default function SetPasswordPage() {
     } finally {setPending(false);}
   }
 
+  if(saved)return <main className="auth-wrap"><Brand/><section className="card"><h1>Your OliverFee 360 Sales Password Is Ready!</h1><p>Your password was saved securely. Owner activation is required before access to your private Sales Dashboard. Sign in with your invited email address.</p><a className="btn w-full" href="/sales/login">Log In to OliverFee 360</a></section></main>;
   return (
     <main className="auth-wrap">
       <Brand/>

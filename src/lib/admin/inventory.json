@@ -72,6 +72,20 @@
       "steps": "Open preview and follow the real screen navigation."
     },
     {
+      "id": "route:/admin/permit-lookup",
+      "path": "/admin/permit-lookup",
+      "label": "/admin/permit-lookup",
+      "group": "Administration",
+      "access": "Owner only",
+      "role": "owner",
+      "status": "live",
+      "source": "src/app/admin/permit-lookup/page.tsx",
+      "previewPath": "/admin/permit-lookup",
+      "scenario": "populated",
+      "setup": null,
+      "steps": "Open preview and follow the real screen navigation."
+    },
+    {
       "id": "route:/admin/prospects/export",
       "path": "/admin/prospects/export",
       "label": "Carrier prospects CSV download",
@@ -151,6 +165,20 @@
       "status": "live",
       "source": "src/app/api/sales/call/route.ts",
       "previewPath": "/api/sales/call",
+      "scenario": "populated",
+      "setup": null,
+      "steps": "Open preview and follow the real screen navigation."
+    },
+    {
+      "id": "route:/api/sales/quote-document",
+      "path": "/api/sales/quote-document",
+      "label": "/api/sales/quote-document",
+      "group": "Administration",
+      "access": "Owner only",
+      "role": "owner",
+      "status": "live",
+      "source": "src/app/api/sales/quote-document/route.ts",
+      "previewPath": "/api/sales/quote-document",
       "scenario": "populated",
       "setup": null,
       "steps": "Open preview and follow the real screen navigation."
@@ -389,6 +417,20 @@
       "status": "live",
       "source": "src/app/sales/payment-result/page.tsx",
       "previewPath": "/sales/payment-result",
+      "scenario": "populated",
+      "setup": null,
+      "steps": "Open preview and follow the real screen navigation."
+    },
+    {
+      "id": "route:/sales/permit-lookup",
+      "path": "/sales/permit-lookup",
+      "label": "/sales/permit-lookup",
+      "group": "Administration",
+      "access": "Owner only",
+      "role": "owner",
+      "status": "live",
+      "source": "src/app/sales/permit-lookup/page.tsx",
+      "previewPath": "/sales/permit-lookup",
       "scenario": "populated",
       "setup": null,
       "steps": "Open preview and follow the real screen navigation."

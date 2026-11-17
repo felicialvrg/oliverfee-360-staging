@@ -17,7 +17,7 @@ export async function trainingData(){
  const who=await trainingActor(),client=await createClient();
  const [lessons,assignments,completions]=await Promise.all([client.from('training_lessons').select('slug,title,status,version,object_path'),client.from('training_assignments').select('*'),client.from('training_completions').select('*')]);
  if([lessons,assignments,completions].some(r=>r.error))throw new SalesError('Training database setup is pending.',503);
- return {owner:who.owner,lessons:lessons.data||[],assignments:assignments.data||[],completions:completions.data||[]};
+ return {owner:who.owner,downloadsEnabled:process.env.TRAINING_DOWNLOADS_ENABLED==='true',lessons:lessons.data||[],assignments:assignments.data||[],completions:completions.data||[]};
 }
 export async function playback(){
  await trainingActor();const client=await createClient();
@@ -53,7 +53,7 @@ export async function uploadApproved(){
 export async function assignTraining(user:string,revoke:boolean){
  await trainingActor(true);if(!/^[a-f0-9-]{36}$/i.test(user))throw new SalesError('Select an existing representative.',400);
  const service=createAdminClient(),rep=await service.from('sales_representatives').select('user_id,status').eq('user_id',user).single();
- if(rep.error||rep.data?.status!=='active')throw new SalesError('An existing active representative is required.',409);
+ if(rep.error||!rep.data||(!revoke&&rep.data.status!=='active'))throw new SalesError('An existing representative is required; new assignments require active status.',409);
  if(revoke){const result=await service.from('training_assignments').update({revoked_at:new Date().toISOString()}).eq('lesson_slug',slug).eq('user_id',user).select('user_id');if(result.error||!result.data?.length)throw new SalesError('Assignment not found or revocation failed.',409);}
  else {const result=await service.from('training_assignments').upsert({lesson_slug:slug,user_id:user,revoked_at:null},{onConflict:'lesson_slug,user_id'});if(result.error)throw new SalesError('Training assignment failed.',409);}
  return {saved:true};

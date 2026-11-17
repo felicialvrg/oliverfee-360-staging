@@ -1,4 +1,8 @@
+import {sendInitialInvitation} from './initial-invitation';
+import {renameRepresentative} from './representative-name';
 import 'server-only';
+import {resendSalesEmail} from './resend-email';
+import {removeRepresentative} from './remove-representative';
 import {screenProspect} from './dnc';
 import {createClient} from '@/lib/supabase/server';
 import {actor,salesData,command,sameOrigin,requestBody,salesFailure,SalesError} from './server';
@@ -38,9 +42,13 @@ export async function postSales(request:Request,management=false){try{
  else if(action==='email-checkout')result=await sendCheckoutEmail(uuid(raw.id));
  else{
   if(!management)throw new SalesError('This is an owner-only sales action.',403);
-  if(action==='owner-enrollment')result=await command(action,raw.id?uuid(raw.id):null,applicationPayload(raw));
+  if(action==='rep-rename')result=await renameRepresentative(raw.id,raw.name);
+  else if(action==='resend-invite')result=await resendSalesEmail(raw.id,true);
+  else if(action==='resend-email')result=await resendSalesEmail(raw.id);
+  else if(action==='remove-rep')result=await removeRepresentative(raw.id);
+  else if(action==='owner-enrollment')result=await command(action,raw.id?uuid(raw.id):null,applicationPayload(raw));
   else if(action==='quote-approve'||action==='quote-reject'){const notes=text(raw.notes,2000);if(notes.length<3)throw new SalesError('Owner review notes required.');result=await command(action,uuid(raw.id),{notes,resolutions:raw.resolutions||{}});}
-  else if(action==='register-rep'){const representative=await registerRepresentative(raw);result={representative,notifications:await drainSalesOutbox()};}
+  else if(action==='register-rep'){const representative=await registerRepresentative(raw) as {user_id:string};const notifications=await sendInitialInvitation(representative.user_id);result={representative,notifications,invitationStatus:notifications.sent===1||'alreadySent' in notifications&&notifications.alreadySent?'sent':notifications.failed?'failed':'unknown'};}
   else if(action==='rep-update'){
    const status=text(raw.status),mode=text(raw.commission_mode),value=Number(raw.commission_value);if(!['invited','active','suspended','inactive'].includes(status)||!['none','percent','flat'].includes(mode)||!Number.isSafeInteger(value)||value<0||value>1000000||mode==='percent'&&value>10000)throw new SalesError('Invalid representative status or commission settings.');
    result=await command(action,uuid(raw.id),{status,commission_mode:mode,commission_value:mode==='none'?0:value});
@@ -59,3 +67,5 @@ export async function postSales(request:Request,management=false){try{
  }
  return Response.json({ok:true,result},{headers:{'Cache-Control':'no-store'}});
  }catch(e){return salesFailure(e);}}
+
+
