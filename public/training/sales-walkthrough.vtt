@@ -1,0 +1,45 @@
+WEBVTT
+
+1
+00:00:00.005 --> 00:00:03.606
+1. Sign in with your own salesperson account. This demonstration uses TEST DATA ONLY.
+
+2
+00:00:03.606 --> 00:00:07.118
+2. Open Assigned Leads. Search existing records before starting an application.
+
+3
+00:00:07.118 --> 00:00:10.833
+3. Use SAFER / FMCSA to verify the carrier. No USDOT is invented for this test lead.
+
+4
+00:00:10.833 --> 00:00:14.607
+4. Record an inbound conversation and notes. Outbound calling stays blocked until DNC clearance.
+
+5
+00:00:14.607 --> 00:00:18.300
+5. Confirm company, contact, equipment, drivers, services and membership. Save a draft to resume later.
+
+6
+00:00:18.300 --> 00:00:21.994
+6. Complete the application and generate an itemized quote. Unknown fees remain pending.
+
+7
+00:00:21.994 --> 00:00:25.650
+7. OWNER STEP (simulated): verify unresolved fees, record the scope and approve the exact quote.
+
+8
+00:00:25.650 --> 00:00:29.211
+8. Send the secure checkout link. Customer enters card details on Stripe. Here, no email or session is created.
+
+9
+00:00:29.211 --> 00:00:32.771
+9. SIMULATED verified server payment closes the sale and queues the welcome invitation. Redirect alone is not proof.
+
+10
+00:00:32.771 --> 00:00:36.431
+10. Review the completed sale and revenue. Training totals are synthetic; no real account or charge exists.
+
+11
+00:00:36.431 --> 00:00:40.116
+11. Review Activity and follow up. In production, confirm delivery and customer setup; never create a duplicate.
