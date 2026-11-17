@@ -19,7 +19,7 @@ export async function requestedInvitation(service,deliver){
   if(data.users.length<1000)break;if(page===100)throw Error('account_lookup_incomplete');
  }
  let rep=await checked(service.from('sales_representatives').select('user_id,email,status').eq('email',ADDRESS).maybeSingle());
- if(rep&&(!user||rep.user_id!==user.id)||rep&&rep.status!=='invited'||user?.last_sign_in_at)throw Error('existing_account_needs_review');
+ if(rep&&(!user||rep.user_id!==user.id)||rep&&!['invited','active'].includes(rep.status))throw Error('existing_account_needs_review');
  if(!user){
   const created=await service.auth.admin.createUser({email:ADDRESS,email_confirm:false,user_metadata:{full_name:'Chris Hudson',first_name:'Chris',last_name:'Hudson'}});
   if(created.error||created.data.user?.email?.toLowerCase()!==ADDRESS)throw Error('account_creation_not_confirmed');user=created.data.user;
