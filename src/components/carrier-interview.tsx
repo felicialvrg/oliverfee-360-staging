@@ -22,7 +22,19 @@ export function CarrierInterview({available}:{available:boolean}){
   const body=["OLIVERFEE 360 - CARRIER REVIEW",`Company: ${data.company||"Not supplied"}`,`Base: ${data.base}`,`Operation: ${data.scope}`,`Operating and pass-through states: ${data.states.join(", ")}`,"",...results.map(r=>[r.rule.label,r.status,`Why: ${r.reason}`,`Next: ${r.next}`,`Verified: ${r.rule.verifiedOn||"NOT VERIFIED - manual review"}`,...r.rule.sources.map(s=>s.url)].join("\n")),"",...(quote.bundleCents?[`Carrier Startup Bundle service fee: ${money(quote.bundleCents)}; outside fees separate`]:[]),...quote.services.map(s=>`${s.label}: OliverFee service fee ${s.serviceCents===null?"Fee to be confirmed":money(s.serviceCents)}; government / third-party fee ${s.governmentCents===null?"Fee to be confirmed":money(s.governmentCents)}`),`Known OliverFee service fees: ${money(quote.serviceFeeCents)}`,`Known government / third-party fees: ${money(quote.outsideFeeCents)}`,"All charges must be paid upfront before processing begins. UNPAID. Checkout disabled.","A downloaded review is not a submitted request or authorization to file.","",`Collected answers: ${JSON.stringify(context)}`].join("\n");
   const url=URL.createObjectURL(new Blob([body],{type:"text/plain"}));const link=document.createElement("a");link.href=url;link.download="OliverFee360-carrier-review.txt";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  }
- async function send(e:React.FormEvent){e.preventDefault();setReviewed(true);if(!available)return;setPending(true);try{setResult(preview?await preview.call("interview",{interview:data,email,phone}) as {ok:boolean;message:string}:await submitInterview(data,email,phone));}finally{setPending(false);}}
+ async function send(e:React.FormEvent){
+  e.preventDefault();
+  if(pending)return;
+  setReviewed(true);
+  if(!available)return;
+  setPending(true);
+  setResult(null);
+  try{
+   setResult(preview?await preview.call("interview",{interview:data,email,phone}) as {ok:boolean;message:string}:await submitInterview(data,email,phone));
+  }catch{
+   setResult({ok:false,message:"We couldn't confirm your request. Your entries are still here. Download your review or try again."});
+  }finally{setPending(false);}
+ }
  return <><div className="interview-layout"><form className="card" onSubmit={send}>
   <section className="interview-section"><div className="step-label">01 / Your operation</div><h2>Tell us about your carrier</h2><label><span className="label">Company legal name</span><input className="field" value={data.company} onChange={e=>update({company:e.target.value})} maxLength={120} required autoComplete="organization"/></label><OperationFields base={data.base} scope={data.scope} onChange={(key,value)=>update({[key]:value})}/><StatePicker selected={data.states} onChange={states=>update({states})}/><BasicQuestions answers={context.answers} onAnswer={answer}/><FleetEditor vehicles={context.vehicles} states={data.states} nyMethod={context.answers.nyMethod} onChange={vehicles=>update({vehicles})}/></section>
   <section className="interview-section"><div className="step-label">02 / Screen and choose your help</div><h2>Your onboarding checklist</h2><p className="notice">Use the ? beside any item for Questions to Ask the Carrier. A requirement does not mean a new filing is needed: verify existing credentials. Only items you ask us to handle enter your estimate.</p><label><span className="label">Service option</span><select className="field" value={data.packageSelection||"services"} onChange={e=>update({packageSelection:e.target.value as Interview["packageSelection"]})}><option value="services">Individual services / membership review</option><option value="startup">Carrier Startup Bundle — $1,250 one time, plus outside fees</option></select></label><p className="muted">Basic remains $49.99/month. UCR assistance adds no OliverFee service charge. Registration fees are separate.</p>

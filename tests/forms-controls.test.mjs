@@ -27,6 +27,24 @@ function environment(width){
  return {root,input(name,value){document.querySelector(`[name="${name}"]`).value=value;},async click(text){const button=[...document.querySelectorAll('button')].find(x=>x.textContent.includes(text));assert.ok(button,text);await act(async()=>{button.click();await new Promise(r=>setTimeout(r,0));});},close(){act(()=>root.unmount());dom.window.close();for(const [key,value]of saved)if(value===undefined)delete globalThis[key];else globalThis[key]=value;}};
 }
 for(const width of [390,1280]){
+ test(`main login recovers after network rejection at ${width}px`,async()=>{
+  const e=environment(width),paths=[];let attempts=0;
+  try{const Login=component('../src/app/login/page.tsx',null,{'@/lib/config':{authConfigured:()=>true},'@/lib/supabase/client':{createClient:()=>({auth:{signInWithPassword:async()=>{attempts++;if(attempts===1)throw Error('Synthetic network rejection');return {error:null};}}})},'next/navigation':{useRouter:()=>({replace:path=>paths.push(path),refresh(){}})}}).default;act(()=>e.root.render(React.createElement(Login)));e.input('email','member@example.test');e.input('password','Synthetic-Test-Only!');await e.click('Sign in with email');assert.match(document.querySelector('[role="alert"]').textContent,/check your connection/);assert.equal(document.querySelector('button').disabled,false);assert.equal(document.querySelector('[name="email"]').value,'member@example.test');await e.click('Sign in with email');assert.equal(attempts,2);assert.equal(paths.at(-1),'/dashboard');}finally{e.close();}
+ });
+ test(`contact request retains entries and retries after transport failure at ${width}px`,async()=>{
+  const e=environment(width);let attempts=0;
+  const submitContact=async(_prev,form)=>{attempts++;assert.equal(form.get('name'),'Sample Carrier');if(attempts===1)throw Error('Private upstream failure');return {ok:true,message:'Request received'};};
+  try{const Contact=component('../src/components/contact-form.tsx',null,{'@/app/actions/leads':{submitContact}}).ContactForm;act(()=>e.root.render(React.createElement(Contact)));e.input('name','Sample Carrier');e.input('email','sample@example.test');await e.click('Get my free');assert.match(document.querySelector('[role="alert"]').textContent,/couldn't confirm/);assert.doesNotMatch(document.body.textContent,/Private upstream/);assert.equal(document.querySelector('[name="email"]').value,'sample@example.test');assert.equal(document.querySelector('button').disabled,false);await e.click('Get my free');assert.equal(attempts,2);assert.equal(document.querySelector('[role="status"]').textContent,'Request received');}finally{e.close();}
+ });
+ test(`carrier request reports transport failure, retains the form and allows retry at ${width}px`,async()=>{
+  const e=environment(width);let attempts=0,complete;
+  const submitInterview=async()=>{attempts++;if(attempts===1)throw Error('Private upstream failure');return new Promise(resolve=>{complete=resolve;});};
+  const Empty=()=>null;
+  const extra={'@/app/actions/interview':{submitInterview},'@/lib/interview-rules':{reviewInterview:()=>({services:[],bundleCents:125000,serviceFeeCents:125000,outsideFeeCents:0,knownCents:125000})},'@/lib/screening':{screen:()=>[],STATES:[],emptyVehicle:()=>({})},'@/components/screening-workspace':Object.fromEntries(['StatePicker','OperationFields','BasicQuestions','FleetEditor','RuleCard','HelpButton','QuestionPanel'].map(key=>[key,Empty]))};
+  try{const Carrier=component('../src/components/carrier-interview.tsx',null,extra).CarrierInterview;act(()=>e.root.render(React.createElement(Carrier,{available:true})));const form=document.querySelector('form');const submit=()=>act(async()=>{form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,0));});await submit();assert.match(document.querySelector('[role="status"]').textContent,/couldn't confirm/);assert.equal(form.isConnected,true);assert.equal(document.querySelector('button').disabled,false);await submit();assert.equal(document.querySelector('[role="status"]'),null);assert.equal(document.querySelector('button').disabled,true);await submit();assert.equal(attempts,2);await act(async()=>{complete({ok:true,message:'Carrier request received'});});assert.equal(document.querySelector('[role="status"]').textContent,'Carrier request received');assert.equal(document.querySelector('button').disabled,false);}finally{e.close();}
+ });
+}
+for(const width of [390,1280]){
  test(`real login/password/recovery controls use test transport and recover from errors at ${width}px`,async()=>{
   const e=environment(width),calls=[],paths=[];let fail=false;
   const preview={scenario:'populated',call:async(op,data)=>{calls.push({op,data});if(fail)throw Error('Simulated failure');return {ok:true};},navigate:path=>paths.push(path)};

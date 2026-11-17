@@ -31,16 +31,22 @@ function LoginForm() {
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if(pending)return;
     if (!configured) {setError("Member sign-in is not open yet. No account information was sent.");return;}
     setPending(true);
     setError(null);
     const form = new FormData(e.currentTarget);
     if(preview){try{await preview.call("login",{email:String(form.get("email")),password:String(form.get("password"))});preview.navigate("/dashboard");}catch{setError("Wrong email or password.");setPending(false);}return;}
-    const { error } = await createClient().auth.signInWithPassword({
+    let signInError;
+    try{const result = await createClient().auth.signInWithPassword({
       email: String(form.get("email")),
       password: String(form.get("password")),
-    });
-    if (error) {
+    });signInError=result.error;}catch{
+      setError("Sign-in could not be completed. Please check your connection and try again.");
+      setPending(false);
+      return;
+    }
+    if (signInError) {
       setError("Wrong email or password.");
       setPending(false);
       return;
@@ -63,7 +69,7 @@ function LoginForm() {
         <label className="label" htmlFor="password">Password</label>
         <input className="field" id="password" name="password" type="password" required autoComplete="off" />
       </div>
-      {error && <p className="text-sm text-red-700">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       <button className="btn w-full" disabled={pending || !configured}>{pending ? "Signing in..." : "Sign in with email"}</button>
       <p className="text-center text-sm">
         <Link href="/forgot-password" className="text-blue-700 hover:underline">Forgot your password?</Link>
