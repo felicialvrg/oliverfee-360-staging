@@ -1,4 +1,5 @@
 import {sendInitialInvitation} from './initial-invitation';
+import {importAssignedLeads} from './import-assigned';
 import {renameRepresentative} from './representative-name';
 import 'server-only';
 import {resendSalesEmail} from './resend-email';
@@ -42,7 +43,8 @@ export async function postSales(request:Request,management=false){try{
  else if(action==='email-checkout')result=await sendCheckoutEmail(uuid(raw.id));
  else{
   if(!management)throw new SalesError('This is an owner-only sales action.',403);
-  if(action==='rep-rename')result=await renameRepresentative(raw.id,raw.name);
+  if(action==='import-assigned')result=await importAssignedLeads(raw.csv,raw.rep_id);
+  else if(action==='rep-rename')result=await renameRepresentative(raw.id,raw.name);
   else if(action==='resend-invite')result=await resendSalesEmail(raw.id,true);
   else if(action==='resend-email')result=await resendSalesEmail(raw.id);
   else if(action==='remove-rep')result=await removeRepresentative(raw.id);
