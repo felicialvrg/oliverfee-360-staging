@@ -2,13 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
+import {releaseReadiness} from '../src/lib/release-readiness.ts';
 
 test('release email readiness reports booleans without credentials or sending mail',async()=>{
  const names=['RESEND_API_KEY','EMAIL_FROM','SALES_EMAIL_ENCRYPTION_KEY'];
  const saved=Object.fromEntries(names.map(name=>[name,process.env[name]]));
  const module={exports:{}};
  const code=ts.transpileModule(fs.readFileSync(new URL('../src/app/api/release/route.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
- new Function('require','module','exports',code)(name=>{assert.equal(name,'@/lib/config');return {authConfigured:()=>true,requestsConfigured:()=>true};},module,module.exports);
+ new Function('require','module','exports',code)(name=>{if(name==='@/lib/release-readiness')return {releaseReadiness};assert.equal(name,'@/lib/config');return {authConfigured:()=>true,requestsConfigured:()=>true};},module,module.exports);
  try{
   Object.assign(process.env,{RESEND_API_KEY:'synthetic-private-key',EMAIL_FROM:'Oliver Fee 360 <invitations@oliverfee360.com>',SALES_EMAIL_ENCRYPTION_KEY:'a'.repeat(64)});
   const response=await module.exports.GET();const body=await response.text();
