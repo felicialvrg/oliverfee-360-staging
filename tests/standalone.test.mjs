@@ -34,5 +34,5 @@ test('Startup Bundle is 1250 before outside fees without duplicate USDOT or UCR 
 });
 test('Basic and Startup approved prices match marketing copy',async()=>{
  const {pricing}=await import('../src/lib/interview-rules.ts');assert.equal(pricing.basicMonthlyCents,4999);assert.equal(pricing.startupBundleCents,125000);
- const {readFileSync}=await import('node:fs');const plans=readFileSync(new URL('../src/app/plans/page.tsx',import.meta.url),'utf8');assert.ok(plans.includes('49.99'));assert.ok(plans.includes('$1,250'));assert.ok(!plans.includes('$25 service fee'));assert.ok(plans.includes('full total is due before processing begins'));
+ const {readFileSync}=await import('node:fs');const plans=readFileSync(new URL('../src/app/plans/page.tsx',import.meta.url),'utf8');assert.ok(plans.includes('MembershipPricingCards'));assert.ok(plans.includes('$1,250'));assert.ok(!plans.includes('$25 service fee'));assert.ok(plans.includes('full total is due before processing begins'));
 });
