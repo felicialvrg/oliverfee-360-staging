@@ -17,7 +17,7 @@ test('production-only mail patch retries existing queue entries with exact sende
  const notifications=load(base+'sales/notifications.ts',{'server-only':{},'@/lib/supabase/admin':{createAdminClient:()=>service},'@/lib/supabase/server':{},'@/lib/email':email,'./payments':{salesOrigin:()=> 'https://oliverfee360.com'},'./server':{SalesError:Error,command:async()=>{throw Error('Role or account mutation forbidden');}},'./validation':validation});
  try{
  const first=await notifications.drainSalesOutbox();assert.equal(first.sent,1);assert.equal(first.failed,1);assert.equal(generated,2);
- for(const request of requests){assert.equal(request.body.from,'Oliver Fee 360 <invitations@oliverfee360.com>');assert.equal(request.body.reply_to,'oliverfee360@gmail.com');assert.match(request.body.html,/https:\/\/oliverfee360.com\/auth\/confirm\?/);assert.match(request.body.html,/sales\/login/);assert.doesNotMatch(request.body.html,/sales-test|supabase.com\/dashboard/);}
+ for(const request of requests){assert.equal(request.body.from,'Oliver Fee 360 <invitations@oliverfee360.com>');assert.equal(request.body.reply_to,'oliverfee360@gmail.com');assert.match(request.body.html,/https:\/\/oliverfee360.com\/auth\/confirm\?/);assert.match(request.body.html,/https:\/\/oliverfee360.com\/login/);assert.doesNotMatch(request.body.html,/sales-test|supabase.com\/dashboard/);}
  assert.ok(queue.every(row=>row.encrypted_link&&!row.encrypted_link.includes('synthetic-setup')));
  allowSecond=true;const retried=await notifications.drainSalesOutbox();assert.equal(retried.sent,1);assert.equal(generated,2);assert.equal(requests[1].key,requests[2].key);assert.equal(queue.length,2);
  // Unrelated email paths retain their previous headers.

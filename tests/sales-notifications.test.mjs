@@ -7,6 +7,7 @@ test('manual salesperson profile validates role and fields without granting priv
  const api=profileApi(),raw={first_name:'Synthetic',last_name:'Representative',email:'SYNTHETIC@EXAMPLE.TEST',phone:'+1 (202) 555-0199',rep_code:'SYNTHETIC-01',role:'salesperson',notes:'Synthetic test only'};
  const p=api.representativeProfile(raw);assert.equal(p.name,'Synthetic Representative');assert.equal(p.address,'synthetic@example.test');assert.equal(p.metadata.phone,raw.phone);assert.equal(p.metadata.notes,raw.notes);assert.equal('role' in p.metadata,false);assert.equal('password' in p.metadata,false);
  for(const changes of [{role:'admin'},{phone:'invalid phone'},{notes:'x'.repeat(2001)},{first_name:'x'.repeat(61)},{last_name:''},{rep_code:'bad id!'}])assert.throws(()=>api.representativeProfile({...raw,...changes}));
+ const generated=api.representativeProfile({first_name:'New',last_name:'Person',email:raw.email});assert.match(generated.code,/^TEMP-[a-f0-9]{24}$/);assert.notEqual(generated.code,api.representativeProfile({first_name:'New',last_name:'Person',email:raw.email}).code);
  assert.equal(api.representativeProfile({name:'Legacy Name',email:raw.email,rep_code:'LEGACY'}).name,'Legacy Name');
 });
 test('adding a salesperson never changes or reinvites an existing authentication account',async()=>{

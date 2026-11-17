@@ -5,7 +5,7 @@ import {ensureOwnerAccess} from "@/app/actions/owner-access";
 import {usePreview} from "@/components/admin/preview-runtime";
 import { useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import {signInWithIdentity} from "@/app/actions/sign-in";
 import { authConfigured } from "@/lib/config";
 import { Brand } from "@/components/site-shell";
 
@@ -36,18 +36,15 @@ function LoginForm() {
     setPending(true);
     setError(null);
     const form = new FormData(e.currentTarget);
-    if(preview){try{await preview.call("login",{email:String(form.get("email")),password:String(form.get("password"))});preview.navigate("/dashboard");}catch{setError("Wrong email or password.");setPending(false);}return;}
+    if(preview){try{await preview.call("login",{email:String(form.get("email")),password:String(form.get("password"))});preview.navigate("/dashboard");}catch{setError("Email, username or password was not accepted.");setPending(false);}return;}
     let signInError;
-    try{const result = await createClient().auth.signInWithPassword({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });signInError=result.error;}catch{
+    try{const result = await signInWithIdentity(String(form.get("email")),String(form.get("password")));signInError=result.error;}catch{
       setError("Sign-in could not be completed. Please check your connection and try again.");
       setPending(false);
       return;
     }
     if (signInError) {
-      setError("Wrong email or password.");
+      setError("Email, username or password was not accepted.");
       setPending(false);
       return;
     }
@@ -62,15 +59,15 @@ function LoginForm() {
     <form autoComplete="off" onSubmit={onSubmit} className="card space-y-4">
       {!configured && <p className="notice">Member sign-in is not open yet. Browse services or build a carrier checklist without an account.</p>}
       <div>
-        <label className="label" htmlFor="email">Email</label>
-        <input className="field" id="email" name="email" type="email" required autoComplete="off" />
+        <label className="label" htmlFor="email">Email or username</label>
+        <input className="field" id="email" name="email" type="text" required autoComplete="off" />
       </div>
       <div>
         <label className="label" htmlFor="password">Password</label>
         <input className="field" id="password" name="password" type="password" required autoComplete="off" />
       </div>
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      <button className="btn w-full" disabled={pending || !configured}>{pending ? "Signing in..." : "Sign in with email"}</button>
+      <button className="btn w-full" disabled={pending || !configured}>{pending ? "Signing in..." : "Sign in"}</button>
       <p className="text-center text-sm">
         <Link href="/forgot-password" className="text-blue-700 hover:underline">Forgot your password?</Link>
       </p>
@@ -85,8 +82,8 @@ export default function LoginPage() {
       <nav className="account-entry-links" aria-label="Account access"><Link href="/login?next=/admin">Admin Sign In</Link><Link href="/login?portal=member">Member Sign In</Link><Link href="/signup">Create an Account</Link><Link href="/sales/login">Sales Team</Link></nav>
       <span className="eyebrow">Owner & Staff Login</span>
       <h1 className="mt-3 mb-4">Welcome back.</h1>
-      <p className="auth-copy">Use your OliverFee 360 email and password. Owners open the Admin Center; other accounts open only their permitted workspace. No ChatGPT account or matching ChatGPT email is required.</p>
-      <p className="auth-copy">Invited owner or staff member? Open your private invitation email first to verify your address and choose a password. If your link expired, <Link className="text-link" href="/forgot-password">request a new password link</Link>.</p>
+      <p className="auth-copy">Use your OliverFee 360 email or username and password. Owners open the Admin Center; other accounts open only their permitted workspace. No ChatGPT account or matching ChatGPT email is required.</p>
+      <p className="auth-copy">Invited owner or staff member? Open your private invitation email first to verify your address and choose your login. If your link expired, <Link className="text-link" href="/forgot-password">request a new password link</Link>.</p>
       <Suspense>
         <LoginForm />
       </Suspense>

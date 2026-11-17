@@ -21,7 +21,7 @@ export function inviteEmailHtml(companyName: string, link: string, salesperson=f
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#0f172a">
       <h2 style="color:#805d18">Welcome to OliverFee 360</h2>
       <p>Your account for <strong>${escapeHtml(companyName)}</strong> is ready.</p>
-      <p>Tap the button below to choose your password. ${salesperson?"Your administrator must activate Sales access before you can open your private Sales Dashboard.":"Then you can see, upload and download all of your DOT paperwork from your phone."}</p>
+      <p>Tap the button below to ${salesperson?"choose your own username and password, then open your private Sales Dashboard.":"choose your password. Then you can see, upload and download all of your DOT paperwork from your phone."}</p>
       <p><a href="${link}" style="display:inline-block;background:#1d4ed8;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:bold">${salesperson?"Create Your OliverFee 360 Login":"Set up my account"}</a></p>
       <p style="font-size:13px;color:#64748b">This link works once and expires soon. If it stops working, reply to this email and we'll send a new one.</p>
     </div>`;

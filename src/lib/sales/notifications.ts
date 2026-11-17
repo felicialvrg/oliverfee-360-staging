@@ -12,8 +12,8 @@ function decrypt(value:string){const b=Buffer.from(value,'base64'),decipher=crea
 export async function findAuthUser(address:string){const service=createAdminClient();for(let page=1;page<=100;page++){const {data,error}=await service.auth.admin.listUsers({page,perPage:1000});if(error)throw new SalesError('Authentication lookup is unavailable.',503);const users=data.users.filter(u=>u.email?.toLowerCase()===address.toLowerCase());if(users.length>1)throw new SalesError('Account identity needs owner review.',409);if(users[0])return users[0];if(data.users.length<1000)return null;}throw new SalesError('Account lookup needs operator review.',503);}
 export function representativeProfile(raw:Record<string,unknown>){
  const field=(key:string,max:number)=>{const value=raw[key];if(value===undefined||value===null)return '';if(typeof value!=='string'||value.trim().length>max)throw new SalesError('Invalid '+key+' field.');return value.trim();};
- const first=field('first_name',60),last=field('last_name',60),name=field('name',120)||[first,last].filter(Boolean).join(' '),phone=field('phone',40),notes=field('notes',2000),code=field('rep_code',32),address=email(raw.email);
- if(name.length<2||name.length>120||(first&&!last)||(!first&&last)||!(/^[A-Za-z0-9_-]{2,32}$/).test(code)||raw.role!==undefined&&raw.role!=='salesperson'||phone&&!/^[+0-9(). x-]{5,40}$/.test(phone))throw new SalesError('Enter a valid salesperson name, email, phone and unique representative ID. Only the Salesperson role is allowed.');
+ const first=field('first_name',60),last=field('last_name',60),name=field('name',120)||[first,last].filter(Boolean).join(' '),phone=field('phone',40),notes=field('notes',2000),code=field('rep_code',32)||'TEMP-'+randomBytes(12).toString('hex'),address=email(raw.email);
+ if(name.length<2||name.length>120||(first&&!last)||(!first&&last)||!(/^[A-Za-z0-9_-]{2,32}$/).test(code)||raw.role!==undefined&&raw.role!=='salesperson'||phone&&!/^[+0-9(). x-]{5,40}$/.test(phone))throw new SalesError('Enter a valid salesperson name, email and phone. Only the Salesperson role is allowed.');
  return {address,name,code,metadata:{full_name:name,first_name:first,last_name:last,phone,notes}};
 }
 export async function registerRepresentative(raw:Record<string,unknown>){
@@ -56,7 +56,7 @@ export async function deliverSalesNotifications(service:ReturnType<typeof create
    }
    idempotency+='-'+item.link_created_at;subject=item.kind==='representative-invite'?'Your individual OliverFee 360 sales login':'Welcome to OliverFee 360';
    html=inviteEmailHtml(item.kind==='representative-invite'?'OliverFee 360 Sales Representative':'your OliverFee 360 membership',link,item.kind==='representative-invite');
-   if(item.kind==='representative-invite')html+='<p>Your administrator must activate your representative record. After password setup, use the dedicated sales login at '+salesOrigin()+'/sales/login.</p>';
+   if(item.kind==='representative-invite')html+='<p>Choose your personal username and password, then continue to your private Sales Dashboard. For future visits, sign in at <a href="'+salesOrigin()+'/login">OliverFee360.com</a> with your email or username.</p>';
   }
   if(!await sendEmail(item.recipient,subject,html,idempotency,item.kind==='representative-invite'?{replyTo:'oliverfee360@gmail.com'}:undefined))throw new Error('Email provider did not confirm acceptance.');
   const {error:saved}=await service.from('sales_outbox').update({status:'sent',sent_at:new Date().toISOString(),lease_until:null,last_error:null}).eq('id',item.id);if(saved)throw new Error('Delivery acceptance could not be recorded.');sent++;

@@ -5,5 +5,5 @@ test('Sales login always renders the password form for existing Owner/Sales sess
  const loaded={exports:{}};new Function('require','module','exports',ts.transpileModule(fs.readFileSync('src/app/sales/login/page.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText)(name=>{assert.ok(imports[name],name);return imports[name];},loaded,loaded.exports);
  for(const registration of [undefined,'complete'])assert.equal((await loaded.exports.default({searchParams:Promise.resolve({registration})})).type,Login);
  assert.equal(sessionChecks,0);
- const form=fs.readFileSync('src/components/sales/login-form.tsx','utf8');assert.match(form,/signInWithPassword/);assert.match(form,/type="password"/);
+ const form=fs.readFileSync('src/components/sales/login-form.tsx','utf8');assert.match(form,/signInWithIdentity/);assert.match(form,/type="password"/);
 });
