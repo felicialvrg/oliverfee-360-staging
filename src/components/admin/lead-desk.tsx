@@ -1,6 +1,7 @@
 "use client";
 import {usePreview} from "@/components/admin/preview-runtime";
 import {useRouter} from "next/navigation";
+import {FederalLookups,saferLookupUrl} from "@/components/sales/federal-lookups";
 const STATUSES = ["new", "called", "quoted", "paid", "active", "lost"];
 
 export type Lead = {
@@ -22,6 +23,7 @@ export function LeadDesk({leads,status}:{leads:Lead[];status?:string}){const pre
   return (
     <>
       <section className="page-hero"><span className="eyebrow">Carrier outreach</span><h1>Carrier Lead Desk</h1><p className="hero-copy">Review the request, make the call, and keep your next follow-up in sight.</p></section>
+      <FederalLookups/>
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="mr-auto text-2xl font-bold">Leads</h1>
         {["all", ...STATUSES].map((s) => (
@@ -59,7 +61,7 @@ export function LeadDesk({leads,status}:{leads:Lead[];status?:string}){const pre
               <div className="sm:col-span-2">
                 <p className="font-medium">{l.name}{l.company && ` · ${l.company}`}</p>
                 <p className="text-xs text-slate-500">
-                  {l.usdot && `USDOT ${l.usdot} · `}
+                  {l.usdot && <a href={saferLookupUrl(l.usdot)} target="_blank" rel="noopener noreferrer">USDOT {l.usdot} ↗ · </a>}
                   {l.phone && <a className="text-blue-700" href={`tel:${l.phone}`}>{l.phone}</a>}
                   {l.email && ` · ${l.email}`}
                 </p>
