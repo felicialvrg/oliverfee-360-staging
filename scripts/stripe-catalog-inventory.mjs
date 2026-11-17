@@ -20,7 +20,11 @@ export async function inventory(env=process.env,transport=fetch){
  const base={schema:1,operation:'read-only-inventory',checkedAt:new Date().toISOString(),chargesCreated:0,subscriptionsChanged:0};
  if(missing.length)return {...base,status:'missing_configuration',missing};
  const key=env.STRIPE_SECRET_KEY.trim(),expected=env.SALES_STRIPE_ACCOUNT_ID.trim();
- if(!/^sk_(live|test)_/.test(key)||!/^acct_[A-Za-z0-9]+$/.test(expected))return {...base,status:'invalid_configuration_format'};
+ const keyValid=/^sk_(live|test)_/.test(key),accountValid=/^acct_[A-Za-z0-9]+$/.test(expected);
+ if(!keyValid||!accountValid)return {...base,status:'invalid_configuration_format',fields:{
+  STRIPE_SECRET_KEY:keyValid?'expected_secret_key_format':/^pk_/.test(key)?'publishable_key_in_secret_key_setting':/^rk_/.test(key)?'restricted_key_not_supported_by_existing_checkout':/^whsec_/.test(key)?'webhook_secret_in_api_key_setting':/^["']|["']$/.test(key)?'value_has_quote_wrapper':'expected_sk_live_or_sk_test_key',
+  SALES_STRIPE_ACCOUNT_ID:accountValid?'expected_account_id_format':/^["']|["']$/.test(expected)?'value_has_quote_wrapper':'expected_acct_account_id',
+ }};
  const live=key.startsWith('sk_live_');
  async function get(path){
   const r=await transport('https://api.stripe.com/v1'+path,{method:'GET',headers:{Authorization:'Bearer '+key,'Stripe-Version':'2024-06-20'},signal:AbortSignal.timeout(15000)});

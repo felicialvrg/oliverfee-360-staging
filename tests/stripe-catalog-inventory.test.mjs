@@ -19,3 +19,8 @@ test('missing configuration and provider errors produce no secret-bearing output
  assert.equal((await inventory({},()=>{throw Error('No call');})).status,'missing_configuration');
  const failed=await inventory(env,async()=>{throw Error('SYNTHETIC_SECRET private payload');});assert.equal(failed.status,'inspection_failed');assert.doesNotMatch(JSON.stringify(failed),/SYNTHETIC_SECRET|private payload/);
 });
+test('invalid configuration identifies only the field/type, without revealing its value or making calls',async()=>{
+ for(const [key,account,field,expected] of [['pk_live_PRIVATE','acct_VALID','STRIPE_SECRET_KEY','publishable_key_in_secret_key_setting'],['sk_live_PRIVATE','not_the_account','SALES_STRIPE_ACCOUNT_ID','expected_acct_account_id'],['"sk_live_PRIVATE"','acct_VALID','STRIPE_SECRET_KEY','value_has_quote_wrapper']]){
+  const result=await inventory({STRIPE_SECRET_KEY:key,SALES_STRIPE_ACCOUNT_ID:account},()=>{throw Error('No call allowed');});assert.equal(result.status,'invalid_configuration_format');assert.equal(result.fields[field],expected);assert.doesNotMatch(JSON.stringify(result),/PRIVATE|acct_VALID|not_the_account/);
+ }
+});
