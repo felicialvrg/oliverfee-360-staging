@@ -12,3 +12,28 @@ test('owner chooses quantity and exact recipient, reviews assignments and deleti
 test('employee form accepts a custom position and sends a private invite without selecting an administrator role',async()=>{
  const e=environment(),oldFetch=globalThis.fetch;let submitted;globalThis.fetch=async(url,init)=>{submitted=JSON.parse(init.body);return {ok:true,json:async()=>({result:{invitationStatus:'sent'}})};};try{const {EmployeeInvite}=component('employee-invite');await act(async()=>e.root.render(React.createElement(EmployeeInvite)));for(const [key,value]of Object.entries({first_name:'Synthetic',last_name:'Employee',job_title:'Operations Coordinator',email:'synthetic@example.test'}))document.querySelector('[name='+key+']').value=value;await e.click('Add employee and send invite');assert.equal(submitted.job_title,'Operations Coordinator');assert.equal(submitted.action,'register-rep');assert.equal(submitted.role,undefined);assert.match(document.body.textContent,/email provider accepted/);assert.equal(document.querySelector('[name=email]').value,'');}finally{globalThis.fetch=oldFetch;e.close();}
 });
+
+test('deletion refreshes counts after each batch and resumes a partially applied lost response without losing the queue',async()=>{
+ const e=environment(),oldFetch=globalThis.fetch;const leads=Array.from({length:45},(_,i)=>({id:'lead'+i,company_name:'Synthetic '+i,usdot:String(9300000+i),assigned_to:'chris',revision:1})),remaining=new Set(leads.map(l=>l.id)),writes=[];let fail=true;
+ globalThis.fetch=async(url,init)=>{const body=init?.body?JSON.parse(init.body):null;let result;
+  if(!body)result={people:[{user_id:'chris',name:'Chris Hudson',status:'active',assigned_count:remaining.size,job_title:'Salesperson'}],unassigned:0};
+  else if(body.action==='review-delete')result={leads,protected:0};
+  else if(body.action==='delete-upload'){writes.push(body.leads.map(l=>l.id));if(writes.length===2&&fail){body.leads.slice(0,7).forEach(l=>remaining.delete(l.id));throw Error('Synthetic lost response');}let deleted=0,alreadyDeleted=0;for(const l of body.leads)if(remaining.delete(l.id))deleted++;else alreadyDeleted++;result={deleted,alreadyDeleted,skipped:[]};}
+  return {ok:true,json:async()=>result};
+ };
+ try{const {LeadManagement}=component('lead-management');await act(async()=>e.root.render(React.createElement(LeadManagement,{onComplete:async()=>{}})));const file='company_name,usdot\n'+leads.map(l=>l.company_name+','+l.usdot).join('\n');await e.change(document.querySelector('input[type=file]'),{files:[{size:file.length,text:async()=>file}]});window.confirm=()=>true;await e.click('Delete 45 reviewed uploaded leads');assert.equal(remaining.size,18);assert.match(document.querySelector('[role=alert]').textContent,/20 of 45/);assert.equal(document.querySelector('progress').value,20);assert.equal(document.querySelector('tbody tr td:last-child').textContent,'18');assert.ok(document.querySelector('select').disabled);assert.ok([...document.querySelectorAll('button')].some(b=>b.textContent==='Refresh counts'&&!b.disabled));
+  fail=false;await e.click('Resume processing');assert.equal(remaining.size,0);assert.deepEqual(writes.map(b=>b.length),[20,20,20,5]);assert.deepEqual(writes[1],writes[2]);assert.equal(document.querySelector('tbody tr td:last-child').textContent,'0');assert.match(document.body.textContent,/Deletion complete: 38 deleted; 7 already absent/);assert.equal(document.querySelector('progress'),null);assert.equal(document.querySelector('select').disabled,false);
+ }finally{globalThis.fetch=oldFetch;e.close();}
+});
+
+test('assignment pauses at a confirmed batch, resumes the remainder, and returning to unassigned uses a null recipient',async()=>{
+ const e=environment(),oldFetch=globalThis.fetch;const leads=Array.from({length:45},(_,i)=>({id:'lead'+i,company_name:'Synthetic '+i,usdot:String(9400000+i),assigned_to:'chris',revision:1}));let release,first=true,assigned=0;const writes=[];
+ globalThis.fetch=async(url,init)=>{const body=init?.body?JSON.parse(init.body):null;let result;
+  if(!body)result={people:[{user_id:'chris',name:'Chris Hudson',status:'active',assigned_count:45-assigned,job_title:'Salesperson'}],unassigned:assigned};
+  else if(body.action==='preview-allocation'){assert.equal(body.rep_id,null);result={leads};}
+  else{writes.push(body);assert.equal(body.rep_id,null);assert.equal(body.reassign,true);if(first){first=false;await new Promise(resolve=>{release=resolve;});}assigned+=body.leads.length;result={results:body.leads.map(()=>({ok:true}))};}
+  return {ok:true,json:async()=>result};
+ };
+ try{const {LeadManagement}=component('lead-management');await act(async()=>e.root.render(React.createElement(LeadManagement,{onComplete:async()=>{}})));const selects=document.querySelectorAll('select');await e.change(selects[0],{value:'chris'});assert.ok([...selects[1].options].some(o=>o.value==='__unassigned__'));await e.change(selects[1],{value:'__unassigned__'});await e.change(document.querySelector('input[type=number]'),{value:'45'});await e.click('Review assignment');await e.click('Confirm assignment of 45 leads');await e.click('Pause processing');await act(async()=>release());assert.equal(writes.length,1);assert.equal(assigned,20);assert.match(document.body.textContent,/Paused after 20 of 45/);await e.click('Resume processing');assert.deepEqual(writes.map(w=>w.leads.length),[20,20,5]);assert.equal(assigned,45);assert.match(document.body.textContent,/Assignment complete: 45 assigned to Unassigned leads/);assert.equal(document.querySelector('tbody tr td:last-child').textContent,'0');
+ }finally{globalThis.fetch=oldFetch;e.close();}
+});

@@ -13,13 +13,13 @@ export async function saveEmployeePosition(raw:Record<string,unknown>){
  const result=await admin.auth.admin.updateUserById(id,{user_metadata:{...user.data.user.user_metadata,job_title:raw.job_title.trim()}});if(result.error)throw new SalesError('Job title could not be saved.',503);return {saved:true};
 }
 
-export async function leadSummary(){
+export async function leadSummary(countsOnly=false){
  await actor(true);const client=await createClient(),admin=createAdminClient();
  const roster=await representativeRoster(client);if(roster.error)throw new SalesError('Employee roster unavailable.',503);
  const people=await Promise.all((roster.data||[]).map(async r=>{
-  const [leads,account]=await Promise.all([client.from('sales_prospects').select('id',{count:'exact',head:true}).eq('assigned_to',r.user_id),admin.auth.admin.getUserById(String(r.user_id))]);
+  const [leads,account]=await Promise.all([client.from('sales_prospects').select('id',{count:'exact',head:true}).eq('assigned_to',r.user_id),countsOnly?Promise.resolve({data:{user:null},error:null}):admin.auth.admin.getUserById(String(r.user_id))]);
   if(leads.error||leads.count===null||account.error)throw new SalesError('Employee counts could not be verified.',503);
-  return {...r,assigned_count:leads.count,job_title:String(account.data.user?.user_metadata?.job_title||'Salesperson')};
+  return {...r,assigned_count:leads.count,...(!countsOnly?{job_title:String(account.data.user?.user_metadata?.job_title||'Salesperson')}:{})};
  }));
  const free=await client.from('sales_prospects').select('id',{count:'exact',head:true}).is('assigned_to',null);
  if(free.error||free.count===null)throw new SalesError('Available lead count unavailable.',503);
@@ -27,9 +27,9 @@ export async function leadSummary(){
 }
 
 export async function previewLeadAllocation(raw:Record<string,unknown>){
- await actor(true);const target=uuid(raw.rep_id),source=raw.source_id?uuid(raw.source_id):null,quantity=Number(raw.quantity);
+ await actor(true);const target=raw.rep_id===null?null:uuid(raw.rep_id),source=raw.source_id?uuid(raw.source_id):null,quantity=Number(raw.quantity);
  if(!Number.isSafeInteger(quantity)||quantity<1||quantity>10000||target===source)throw new SalesError('Choose a different recipient and 1–10,000 leads.');
- const client=await createClient();const rep=await client.from('sales_representatives').select('status').eq('user_id',target).single();if(rep.error||rep.data?.status!=='active')throw new SalesError('Choose an active employee.',409);
+ const client=await createClient();if(target){const rep=await client.from('sales_representatives').select('status').eq('user_id',target).single();if(rep.error||rep.data?.status!=='active')throw new SalesError('Choose an active employee.',409);}
  const leads:Record<string,unknown>[]=[];
  while(leads.length<quantity){let q=client.from('sales_prospects').select('id,company_name,usdot,assigned_to,revision').order('created_at').order('id').range(leads.length,Math.min(quantity,leads.length+500)-1);q=source?q.eq('assigned_to',source):q.is('assigned_to',null);const result=await q;if(result.error)throw new SalesError('Lead allocation could not be reviewed.',503);leads.push(...result.data||[]);if((result.data||[]).length<Math.min(500,quantity-(leads.length-(result.data||[]).length)))break;}
  return {leads,rep_id:target,source_id:source,requested:quantity};
@@ -52,21 +52,27 @@ export async function reviewUploadedLeads(csv:unknown){
 
 export async function deleteUploadedLeads(raw:Record<string,unknown>){
  const who=await actor(true);if(raw.confirm!==true||!Array.isArray(raw.leads)||!raw.leads.length||raw.leads.length>20)throw new SalesError('Review and confirm 1–20 uploaded leads per request.');
- const admin=createAdminClient();let deleted=0;const skipped:string[]=[];
- for(const item of raw.leads){
+ const items=raw.leads.map(item=>{const id=uuid(item?.id);if(!Number.isSafeInteger(item?.revision)||item.revision<0)throw new SalesError('Review the CSV again before deleting.');return {...item,id};});
+ if(new Set(items.map(item=>item.id)).size!==items.length)throw new SalesError('Review unique leads before deleting.');
+ const admin=createAdminClient();let deleted=0,alreadyDeleted=0;const skipped:string[]=[];
+ async function remove(item:typeof items[number]){
   const id=uuid(item?.id);if(!Number.isSafeInteger(item.revision)||item.revision<0)throw new SalesError('Review the CSV again before deleting.');
   const current=await admin.from('sales_prospects').select('*').eq('id',id).maybeSingle();if(current.error)throw new SalesError('Deletion interrupted. Review the file again.',503);
-  if(!current.data)continue;const p=current.data;
-  if(p.revision!==item.revision||p.assigned_to!==item.assigned_to||p.disposition!=='Not Called'||p.follow_up_at||!p.notes.includes('Imported source columns:')){skipped.push(id);continue;}
+  if(!current.data){alreadyDeleted++;return;}const p=current.data;
+  if(p.revision!==item.revision||p.assigned_to!==item.assigned_to||p.disposition!=='Not Called'||p.follow_up_at||!p.notes.includes('Imported source columns:')){skipped.push(id);return;}
   const [apps,history]=await Promise.all([admin.from('sales_applications').select('id').eq('prospect_id',id).limit(1),admin.from('sales_activity').select('id,action,details').eq('prospect_id',id)]);
   if(apps.error||history.error)throw new SalesError('Lead history could not be verified.',503);
-  if(apps.data?.length||history.data?.some(a=>a.action!=='assign')){skipped.push(id);continue;}
+  if(apps.data?.length||history.data?.some(a=>a.action!=='assign')){skipped.push(id);return;}
   // Preserve the original lead and assignment audit before removing a pristine
   // imported record. Work/application references also prevent physical deletion.
   const archive=await admin.from('sales_activity').insert({actor_id:who.id,action:'uploaded-lead-delete-reviewed',details:{original_prospect_id:id,lead:p}});if(archive.error)throw new SalesError('Lead archive could not be saved. No deletion attempted.',503);
   for(const event of history.data||[]){const detached=await admin.from('sales_activity').update({prospect_id:null,details:{...event.details,original_prospect_id:id}}).eq('id',event.id).eq('prospect_id',id).eq('action','assign');if(detached.error)throw new SalesError('Assignment history could not be preserved.',503);}
   let q=admin.from('sales_prospects').delete().eq('id',id).eq('revision',item.revision).eq('disposition','Not Called').is('follow_up_at',null);q=p.assigned_to?q.eq('assigned_to',p.assigned_to):q.is('assigned_to',null);const result=await q.select('id');
-  if(result.error||!result.data?.length){skipped.push(id);continue;}deleted++;
+  if(result.error||!result.data?.length){skipped.push(id);return;}deleted++;
  }
- return {deleted,skipped};
+ // Bound concurrent database work so a large file cannot make one request
+ // perform hundreds of sequential round trips. Await every started operation
+ // before reporting an interruption; retrying missing IDs is safe.
+ for(let offset=0;offset<items.length;offset+=4){const results=await Promise.allSettled(items.slice(offset,offset+4).map(remove));const failure=results.find(r=>r.status==='rejected');if(failure?.status==='rejected')throw failure.reason;}
+ return {deleted,alreadyDeleted,skipped};
 }

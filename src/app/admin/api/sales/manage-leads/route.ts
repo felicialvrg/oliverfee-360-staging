@@ -1,5 +1,5 @@
 import {sameOrigin,requestBody,salesFailure,SalesError} from '@/lib/sales/server';
 import {leadSummary,previewLeadAllocation,reviewUploadedLeads,deleteUploadedLeads,saveEmployeePosition} from '@/lib/sales/lead-management';
 export const dynamic='force-dynamic';
-export async function GET(){try{return Response.json(await leadSummary(),{headers:{'Cache-Control':'no-store'}});}catch(e){return salesFailure(e);}}
+export async function GET(request:Request){try{return Response.json(await leadSummary(new URL(request.url).searchParams.get('countsOnly')==='true'),{headers:{'Cache-Control':'no-store'}});}catch(e){return salesFailure(e);}}
 export async function POST(request:Request){try{sameOrigin(request);const raw=await requestBody(request);let result;if(raw.action==='employee-position')result=await saveEmployeePosition(raw);else if(raw.action==='preview-allocation')result=await previewLeadAllocation(raw);else if(raw.action==='review-delete')result=await reviewUploadedLeads(raw.csv);else if(raw.action==='delete-upload')result=await deleteUploadedLeads(raw);else throw new SalesError('Unknown lead management action.');return Response.json(result,{headers:{'Cache-Control':'no-store'}});}catch(e){return salesFailure(e);}}
