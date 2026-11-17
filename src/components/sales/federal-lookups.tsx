@@ -1,0 +1,1 @@
+export function FederalLookups(){return <nav aria-label="Official federal carrier lookups" className="sales-actions"><a className="btn" href="https://motus.dot.gov/public/search" target="_blank" rel="noopener noreferrer">FMCSA Lookup</a><a className="btn" href="https://safer.fmcsa.dot.gov/CompanySnapshot.aspx" target="_blank" rel="noopener noreferrer">SAFER Lookup</a></nav>;}
