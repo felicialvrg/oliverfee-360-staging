@@ -19,7 +19,7 @@ export async function requestedInvitation(service,deliver){
   if(data.users.length<1000)break;if(page===100)throw Error('account_lookup_incomplete');
  }
  let rep=await checked(service.from('sales_representatives').select('user_id,email,status').eq('email',ADDRESS).maybeSingle());
- if(rep&&(!user||rep.user_id!==user.id)||rep&&!['invited','active'].includes(rep.status))throw Error('existing_account_needs_review');
+ if(rep&&(!user||rep.user_id!==user.id))throw Error('existing_identity_conflict');if(rep&&!['invited','active'].includes(rep.status))throw Error(rep.status==='inactive'?'salesperson_removed':rep.status==='suspended'?'salesperson_suspended':'existing_account_needs_review');
  if(!user){
   const created=await service.auth.admin.createUser({email:ADDRESS,email_confirm:false,user_metadata:{full_name:'Chris Hudson',first_name:'Chris',last_name:'Hudson'}});
   if(created.error||created.data.user?.email?.toLowerCase()!==ADDRESS)throw Error('account_creation_not_confirmed');user=created.data.user;
@@ -52,7 +52,7 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href&&proce
   const email=loadServerModule('src/lib/email.ts',{'server-only':{}});
   const notifications=loadServerModule('src/lib/sales/notifications.ts',{'server-only':{},'node:crypto':await import('node:crypto'),'@/lib/supabase/admin':{createAdminClient:()=>service},'@/lib/supabase/server':{},'@/lib/email':email,'./payments':{salesOrigin:()=> 'https://oliverfee360.com'},'./server':{SalesError:Error},'./validation':{}});
   report=await requestedInvitation(service,notifications.deliverSalesNotifications);
- }catch(error){report={status:'blocked',reason:['record_check_failed','account_lookup_failed','ambiguous_account','account_lookup_incomplete','existing_account_needs_review','account_creation_not_confirmed','conflicting_permissions','invitation_busy_or_recent','invitation_claim_changed','email_not_confirmed','configuration_not_verified'].includes(error.message)?error.message:'operator_check_failed'};}
+ }catch(error){report={status:'blocked',reason:['record_check_failed','account_lookup_failed','ambiguous_account','account_lookup_incomplete','existing_account_needs_review','existing_identity_conflict','salesperson_removed','salesperson_suspended','account_creation_not_confirmed','conflicting_permissions','invitation_busy_or_recent','invitation_claim_changed','email_not_confirmed','configuration_not_verified'].includes(error.message)?error.message:'operator_check_failed'};}
  fs.mkdirSync('public',{recursive:true});fs.writeFileSync('public/requested-invitation-result.json',JSON.stringify(report));
  console.log(JSON.stringify({requestedSalesInvitation:report.status}));
 }
