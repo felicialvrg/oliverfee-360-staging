@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
@@ -42,7 +42,7 @@ for(const width of [390,1280]){
   const e=environment(width);let attempts=0,complete;
   const submitInterview=async()=>{attempts++;if(attempts===1)throw Error('Private upstream failure');return new Promise(resolve=>{complete=resolve;});};
   const Empty=()=>null;
-  const extra={'@/app/actions/interview':{submitInterview},'@/lib/interview-rules':{reviewInterview:()=>({services:[],bundleCents:125000,serviceFeeCents:125000,outsideFeeCents:0,knownCents:125000})},'@/lib/screening':{screen:()=>[],STATES:[],emptyVehicle:()=>({})},'@/components/screening-workspace':Object.fromEntries(['StatePicker','OperationFields','BasicQuestions','FleetEditor','RuleCard','HelpButton','QuestionPanel'].map(key=>[key,Empty]))};
+  const extra={'@/app/actions/interview':{submitInterview},'@/lib/interview-rules':{reviewInterview:()=>({services:[],bundleCents:75000,serviceFeeCents:75000,outsideFeeCents:0,knownCents:75000})},'@/lib/screening':{screen:()=>[],STATES:[],emptyVehicle:()=>({})},'@/components/screening-workspace':Object.fromEntries(['StatePicker','OperationFields','BasicQuestions','FleetEditor','RuleCard','HelpButton','QuestionPanel'].map(key=>[key,Empty]))};
   try{const Carrier=component('../src/components/carrier-interview.tsx',null,extra).CarrierInterview;act(()=>e.root.render(React.createElement(Carrier,{available:true})));const form=document.querySelector('form');const submit=()=>act(async()=>{form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,0));});await submit();assert.match(document.querySelector('[role="status"]').textContent,/couldn't confirm/);assert.equal(form.isConnected,true);assert.equal(document.querySelector('button').disabled,false);await submit();assert.equal(document.querySelector('[role="status"]'),null);assert.equal(document.querySelector('button').disabled,true);await submit();assert.equal(attempts,2);await act(async()=>{complete({ok:true,message:'Carrier request received'});});assert.equal(document.querySelector('[role="status"]').textContent,'Carrier request received');assert.equal(document.querySelector('button').disabled,false);}finally{e.close();}
  });
 }
@@ -128,3 +128,4 @@ for(const width of [390,1280])test('four account entry buttons preserve role-spe
 });
 
 for(const width of [390,1280])test('Sales setup saves chosen username and password then opens Sales at '+width+'px',async()=>{const e=environment(width),paths=[],calls=[],prior=globalThis.fetch;try{window.history.replaceState(null,'','/set-password?portal=sales');let fail=true;globalThis.fetch=async(url,init)=>{calls.push({url,body:JSON.parse(init.body)});return {ok:!fail,json:async()=>fail?{error:'Choose a different username.'}:{destination:'/sales'}};};const Password=component('../src/app/set-password/page.tsx',null,{'next/navigation':{useRouter:()=>({replace:path=>paths.push(path),refresh(){}})}}).default;act(()=>e.root.render(React.createElement(Password)));e.input('username','personal_name');e.input('password','Synthetic-Only-Password!');e.input('confirm','Synthetic-Only-Password!');await e.click('Save login');assert.match(document.body.textContent,/different username/);assert.equal(document.querySelector('button').disabled,false);assert.deepEqual(paths,[]);fail=false;await e.click('Save login');assert.deepEqual(calls.at(-1),{url:'/api/sales/setup',body:{username:'personal_name',password:'Synthetic-Only-Password!'}});assert.deepEqual(paths,['/sales']);assert.equal(document.querySelector('a[href="/sales/login"]'),null);}finally{globalThis.fetch=prior;e.close();}});
+

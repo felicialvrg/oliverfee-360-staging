@@ -1,4 +1,4 @@
-import test from 'node:test';import assert from 'node:assert/strict';
+﻿import test from 'node:test';import assert from 'node:assert/strict';
 import {completeMembershipCatalog} from '../scripts/complete-membership-catalog.mjs';
 const env={STRIPE_SECRET_KEY:'sk_live_SYNTHETIC_PRIVATE',SALES_STRIPE_ACCOUNT_ID:'acct_SYNTHETIC',SALES_PAYMENTS_ENABLED:'false',SALES_LIVE_CHARGES_APPROVED:'false',NEXT_PUBLIC_SITE_URL:'https://oliverfee360.com'};
 function fixture(){
@@ -21,3 +21,4 @@ test('repeating a completed catalog run performs no writes and produces the same
 test('wrong account or enabled payments stop catalog mutations',async()=>{const f=fixture();f.setMismatch();await assert.rejects(completeMembershipCatalog(env,f.transport),/account_mismatch/);assert.equal(f.calls.length,1);for(const patch of [{STRIPE_SECRET_KEY:'rk_live_SYNTHETIC'},{SALES_PAYMENTS_ENABLED:'true'},{SALES_LIVE_CHARGES_APPROVED:'true'},{NEXT_PUBLIC_SITE_URL:'https://other.example'}]){await assert.rejects(completeMembershipCatalog({...env,...patch},()=>{throw Error('must not call');}),/configuration_guard/);}});
 test('ambiguous or archived plan products block before any write instead of creating duplicate products',async()=>{for(const archived of [false,true]){const f=fixture();if(archived)f.products[0].active=false;else f.products.push({...f.products[0],id:'prod_duplicate'});await assert.rejects(completeMembershipCatalog(env,f.transport),/ambiguous_product|existing_product_needs_review/);assert.ok(f.calls.every(c=>c.options.method==='GET'));}});
 test('an interrupted catalog request can resume by inspecting saved objects without duplicating earlier writes',async()=>{const f=fixture();let count=0;const fail=async(url,options)=>{if(options.method==='POST'&&++count===3)throw Error('synthetic interruption');return f.transport(url,options);};await assert.rejects(completeMembershipCatalog(env,fail),/interruption/);const r=await completeMembershipCatalog(env,f.transport);assert.equal(r.status,'complete');assert.equal(f.products.length,5);assert.equal(f.prices.length,8);assert.equal(new Set(f.prices.map(p=>p.product+':'+p.unit_amount)).size,8);});
+
