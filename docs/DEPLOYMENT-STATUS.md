@@ -18,7 +18,7 @@ The live /api/release response identifies application OliverFee 360, release adm
 - All 8 unique public internal link destinations and their fragments resolve; no broken links found.
 - All 17 referenced same-origin JavaScript/CSS/preload/image asset URLs return HTTP 200.
 - Live Bid Calculator has an editable numeric Total trip mileage (miles) field and Calculate button. Real component tests at 390px/1280px verify expected quotes, input changes, costs, rate confirmation, invalid input and large finite values.
-- Live Plans contains Basic $49.99 and Startup Bundle $399; service inclusion and outside-fee separation are covered by pricing tests.
+- Live Plans contains the approved $750 Startup Bundle; service inclusion and outside-fee separation are covered by pricing tests.
 - Anonymous admin, overview, leads, preview, customer/dashboard and document routes redirect to login. Private admin APIs reject unauthenticated requests with 403.
 - Live POST /admin/api/preview rejects unauthorized creation (403); production lab login returns 404; forged lab cookie/header does not grant owner access; preview-referrer live access is blocked (403).
 

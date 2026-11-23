@@ -1,6 +1,6 @@
 # Carrier Startup Bundle price update
 
-The Carrier Startup Bundle OliverFee 360 service fee is $1,250.00 one time (125000 cents), replacing $399.00 for new estimates. Applicable government and third-party fees remain separately itemized; the full total remains due before processing begins. Basic remains $49.99/month and Basic UCR assistance adds no OliverFee service charge. Checkout remains disabled and requests stay unpaid.
+The current Carrier Startup Bundle OliverFee 360 service fee is $750.00 one time (75000 cents). This supersedes the older $1,250 and $399 references. Applicable government and third-party fees remain separately itemized; the full total remains due before processing begins. Basic remains $49.99/month and Basic UCR assistance adds no OliverFee service charge. Checkout remains disabled and requests stay unpaid.
 
 Updated the standalone homepage, Plans page, estimator option and quote logic; original archived screens, sales/review wording and authoritative Worker quote rules; generated archived build; synthetic preview amounts and pricing tests. Existing customer records and historical signed quotes are not rewritten.
 
