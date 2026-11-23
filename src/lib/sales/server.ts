@@ -25,11 +25,11 @@ export async function actor(management=false){
 }
 export async function salesData(management=false,page=0,query='',status='All'):Promise<SalesData>{
  const who=await actor(management),client=await createClient();
- let list=client.from('sales_prospects').select('*').order('created_at',{ascending:false}).order('id').range(page*30,page*30+30);
+ let list=client.from('sales_prospects').select('*',{count:'exact'}).order('created_at',{ascending:false}).order('id').range(page*30,page*30+29);
  if(!who.owner)list=list.eq('assigned_to',who.id);if(query)list=list.ilike('company_name','%'+query.replace(/[%_\\]/g,'')+'%');
  if(status==='Due')list=list.lte('follow_up_at',new Date().toISOString()).not('disposition','in','("Closed Sale","Do Not Contact","Not Interested")');
  else if((DISPOSITIONS as readonly string[]).includes(status))list=list.eq('disposition',status);
- const {data:prospects,error}=await list;if(error)throw new SalesError('Sales database setup is pending or temporarily unavailable.',503);
+ const {data:prospects,error,count:prospectCount}=await list;if(error)throw new SalesError('Sales database setup is pending or temporarily unavailable.',503);
  const visible=(prospects||[]).slice(0,30) as Prospect[];const ids=visible.map(p=>p.id);
  const {data:applications,error:applicationError}=ids.length?await client.from('sales_applications').select('*').in('prospect_id',ids):{data:[],error:null};
  if(applicationError)throw new SalesError('Applications could not be loaded.',503);
@@ -48,7 +48,7 @@ export async function salesData(management=false,page=0,query='',status='All'):P
  const performance=who.owner?await client.rpc('sales_team_performance'):{data:[],error:null};
  let assignedCount=client.from('sales_prospects').select('id',{count:'exact',head:true});if(!who.owner)assignedCount=assignedCount.eq('assigned_to',who.id);else assignedCount=assignedCount.not('assigned_to','is',null);const assignedTotal=await assignedCount;if(assignedTotal.error||assignedTotal.count===null)throw new SalesError('Assigned lead count unavailable.',503);
  const quoted=appIds.length?await client.from('sales_enrollment_quotes').select('*').in('application_id',appIds).order('created_at',{ascending:false}):{data:[],error:null};
- return {quotes:quoted.data||[],teamPerformance:performance.error?[]:performance.data||[],screening,screeningConfigured:configured,teamSlots:slots.data||[],representative:who.rep,representatives:(reps.data||[]) as Representative[],prospects:visible,applications:(applications||[]) as Application[],checkouts:(checkouts.data||[]) as Checkout[],commissions:(commissions.data||[]) as Commission[],resources:(resources.data||[]) as Resource[],activity:(activity.data||[]) as Activity[],metrics:{...emptyMetrics,...metrics.data,assignedTotal:assignedTotal.count},page,hasMore:(prospects||[]).length>30,outbox:outbox.data||[]};
+ return {quotes:quoted.data||[],teamPerformance:performance.error?[]:performance.data||[],screening,screeningConfigured:configured,teamSlots:slots.data||[],representative:who.rep,representatives:(reps.data||[]) as Representative[],prospects:visible,applications:(applications||[]) as Application[],checkouts:(checkouts.data||[]) as Checkout[],commissions:(commissions.data||[]) as Commission[],resources:(resources.data||[]) as Resource[],activity:(activity.data||[]) as Activity[],metrics:{...emptyMetrics,...metrics.data,assignedTotal:assignedTotal.count},page,hasMore:prospectCount!==null&&((page+1)*30<prospectCount),outbox:outbox.data||[]};
 }
 export async function command(action:string,id:string|null,payload:Record<string,unknown>){
  const client=await createClient();const {data,error}=await client.rpc('sales_command',{p_action:action,p_id:id,p_payload:payload});
