@@ -38,6 +38,7 @@ export async function postSales(request:Request,management=false){try{
  else if(action==='dnc-optout')result=await command(action,uuid(raw.id),{reason:text(raw.reason,500)});
  else if(action==='prospect-notes')result=await command(action,uuid(raw.id),{notes:text(raw.notes,4000),follow_up_at:raw.follow_up_at?new Date(String(raw.follow_up_at)).toISOString():null,revision:raw.revision});
  else if(action==='call')result=await command('call',uuid(raw.id),callPayload(raw));
+ else if(action==='manual-call-start'){if(management)throw new SalesError('An assigned salesperson is required.',403);const client=await createClient();const {data,error}=await client.rpc('sales_start_manual_call',{p_id:uuid(raw.id)});if(error)throw new SalesError('Manual call attempt could not be recorded.',409);result=data;}
  else if(action==='save-application')result=await command(action,uuid(raw.id),applicationPayload(raw));
  else if(action==='checkout')result=await generateCheckout(uuid(raw.id));
  else if(action==='email-checkout')result=await sendCheckoutEmail(uuid(raw.id));
