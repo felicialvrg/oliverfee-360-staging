@@ -1,0 +1,18 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import ts from 'typescript';import React,{act} from 'react';import {createRoot} from 'react-dom/client';import {JSDOM} from 'jsdom';import * as jsx from 'react/jsx-runtime';import * as imports from '../src/lib/sales/large-import.ts';
+test('one CSV goes to one chosen salesperson across batches and safe retries, without splitting or selecting other saved leads',async()=>{
+ const dom=new JSDOM('<div id="root"></div>');globalThis.window=dom.window;globalThis.document=dom.window.document;globalThis.IS_REACT_ACT_ENVIRONMENT=true;
+ const prior=globalThis.fetch,calls=[],rep={user_id:'rep1',name:'Chosen Person',status:'active',rep_code:'TEST'};let fail=true,refreshed=0;
+ globalThis.fetch=async(url,init)=>{calls.push({url,init});if(init?.method!=='POST')return {ok:true,json:async()=>({salespeople:[rep,{...rep,user_id:'other',name:'Other Person'}]})};const body=JSON.parse(init.body);assert.equal(body.action,'import-assigned');assert.equal(body.rep_id,'rep1');const count=imports.readImport(body.csv).rows.length;if(count===1&&fail)return {ok:false,json:async()=>({error:'Synthetic connection interruption'})};return {ok:true,json:async()=>({result:{imported:count,duplicates:0,assigned:count,protected:0}})};};
+ const module={exports:{}};new Function('require','module','exports',ts.transpileModule(fs.readFileSync('src/components/sales/large-import.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText)(n=>n==='react'?React:n==='react/jsx-runtime'?jsx:imports,module,module.exports);
+ const root=createRoot(document.getElementById('root'));const change=async(node,value)=>{const key=Object.keys(node).find(k=>k.startsWith('__reactProps'));await act(async()=>node[key].onChange({target:value}));};
+ try{
+  await act(async()=>root.render(React.createElement(module.exports.LargeLeadImport,{preview:false,representatives:[rep],onComplete:async()=>{refreshed++;}})));
+  const file=document.querySelector('input[type=file]'),select=document.querySelector('select');
+  const csv='Legal name,USDOT\n'+Array.from({length:201},(_,i)=>'Synthetic '+i+','+(9000000+i)).join('\n');await change(file,{files:[{size:csv.length,text:async()=>csv}]});
+  assert.equal(document.querySelector('button.sales-primary').disabled,true);assert.equal(document.querySelectorAll('input[type=number],input[type=checkbox]').length,0);assert.equal(document.querySelectorAll('select').length,1);
+  await change(select,{value:'rep1'});await act(async()=>document.querySelector('button.sales-primary').click());assert.match(document.querySelector('[role=alert]').textContent,/interruption/);assert.equal(select.disabled,true);assert.equal(refreshed,0);
+  fail=false;await act(async()=>document.querySelector('button.sales-primary').click());assert.equal(refreshed,1);assert.match(document.body.textContent,/Assigned to Chosen Person: 201/);assert.match(document.body.textContent,/Upload completed for Chosen Person/);
+  const writes=calls.filter(c=>c.init?.method==='POST').map(c=>JSON.parse(c.init.body));assert.deepEqual(writes.map(w=>imports.readImport(w.csv).rows.length),[200,1,1]);assert.ok(writes.every(w=>w.rep_id==='rep1'));assert.ok(calls.every(c=>!c.url.includes('start=')&&!c.url.includes('unassigned=')));
+  await change(file,{files:[{size:60,text:async()=> 'Legal name,USDOT\nAnother file,8000001'}]});assert.equal(select.disabled,false);await change(select,{value:'other'});assert.match(document.body.textContent,/Assigned to Other Person: 0/);
+ }finally{await act(async()=>root.unmount());globalThis.fetch=prior;dom.window.close();}
+});

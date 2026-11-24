@@ -11,6 +11,10 @@ on:
         description: Deploy after checks (false runs production preflight only)
         type: boolean
         default: false
+      configure_admin:
+        description: Explicitly authorize owner/storage/environment setup
+        type: boolean
+        default: false
 
 # One deploy at a time; a newer push waits for the current one to finish.
 concurrency:
@@ -53,7 +57,7 @@ jobs:
         run: npx --yes vercel@65.14.0 pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Verify owner and configure isolated admin storage
-        if: env.VERCEL_TOKEN != ''
+        if: env.VERCEL_TOKEN != '' && github.event_name == 'workflow_dispatch' && inputs.configure_admin
         env:
           ADMIN_RELEASE_OWNER_IDS: ${{ vars.OLIVERFEE_OWNER_IDS }}
         run: node scripts/configure-admin-production.mjs

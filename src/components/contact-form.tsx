@@ -1,21 +1,27 @@
 "use client";
 
 import {usePreview} from "@/components/admin/preview-runtime";
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { submitContact, type ContactState } from "@/app/actions/leads";
 
 export function ContactForm({ available = true }: { available?: boolean }) {
   const preview=usePreview();
   available=preview?preview.scenario!=="unavailable":available;
-  const submit=preview?async(_prev:ContactState,form:FormData):Promise<ContactState>=>{try{return await preview.call("contact",Object.fromEntries(form)) as {ok:boolean;message:string};}catch(e){return {ok:false,message:e instanceof Error?e.message:"Test save failed"};}}:submitContact;
+  const submit=async(prev:ContactState,form:FormData):Promise<ContactState>=>{
+    try{
+      return preview?await preview.call("contact",Object.fromEntries(form)) as {ok:boolean;message:string}:await submitContact(prev,form);
+    }catch{
+      return {ok:false,message:"We couldn't confirm your message. Your entries are still here. Please try again."};
+    }
+  };
   const [state, action, pending] = useActionState<ContactState, FormData>(submit, null);
 
   if (state?.ok) {
-    return <p className="rounded-lg bg-emerald-50 p-4 text-emerald-800">{state.message}</p>;
+    return <p role="status" className="rounded-lg bg-emerald-50 p-4 text-emerald-800">{state.message}</p>;
   }
 
   return (
-    <form action={action} className="grid gap-4 sm:grid-cols-2">
+    <form onSubmit={event=>{event.preventDefault();if(pending||!available)return;const form=new FormData(event.currentTarget);startTransition(()=>action(form));}} className="grid gap-4 sm:grid-cols-2">
       {!available && <p className="notice sm:col-span-2">Online contact requests are not open yet. You can still explore services and download a carrier review.</p>}
       <div>
         <label className="label" htmlFor="name">Your name *</label>
@@ -42,7 +48,7 @@ export function ContactForm({ available = true }: { available?: boolean }) {
         <textarea className="field" id="message" name="message" rows={3} />
       </div>
       <input type="text" name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
-      {state && !state.ok && <p className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
+      {state && !state.ok && <p role="alert" className="text-sm text-red-700 sm:col-span-2">{state.message}</p>}
       <div className="sm:col-span-2">
         <button className="btn w-full sm:w-auto" disabled={pending || !available}>
           {pending ? "Sending..." : "Get my free compliance check"}

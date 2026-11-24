@@ -103,7 +103,7 @@ IFTA and IRP use actual physical member-jurisdiction travel and vehicle-specific
 
 ## Fees and processing
 
-Basic remains $49.99/month. Basic UCR assistance adds $0 OliverFee service fee. Startup Bundle remains $399 before outside fees. Unknown fees show "Fee to be confirmed." The only new numeric government-fee calculations are a verified standard $300 single permanent MC authority application and California's $30 four-day fuel trip permit per confirmed qualifying vehicle. Both require the exact option/quantity to be answered. Other agency taxes, fuel, tests, insurance and third-party charges remain unpriced pending review. No fee total is permission to operate. Full payment is required upfront before processing; Stripe remains disabled and requests remain unpaid.
+Basic remains $49.99/month. Basic UCR assistance adds $0 OliverFee service fee. Startup Bundle is $750 before outside fees. Unknown fees show "Fee to be confirmed." The only new numeric government-fee calculations are a verified standard $300 single permanent MC authority application and California's $30 four-day fuel trip permit per confirmed qualifying vehicle. Both require the exact option/quantity to be answered. Other agency taxes, fuel, tests, insurance and third-party charges remain unpriced pending review. No fee total is permission to operate. Full payment is required upfront before processing; Stripe remains disabled and requests remain unpaid.
 
 ## Call guide behavior
 

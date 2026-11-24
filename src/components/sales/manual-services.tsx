@@ -1,0 +1,7 @@
+"use client";
+import {useState} from 'react';
+export function ManualServices({initial=[],values,onChange}:{initial?:string[];values?:string[];onChange?:(values:string[])=>void}){
+ const [items,setItems]=useState(initial),[value,setValue]=useState(''),[error,setError]=useState('');const selected=values??items;
+ function update(next:string[]){if(onChange)onChange(next);else setItems(next);}
+ return <div className="sales-full"><label>Other service / permit — enter manually<input aria-label="Other service or permit" value={value} maxLength={100} onChange={e=>setValue(e.target.value)}/></label><button type="button" className="sales-secondary" onClick={()=>{const name=value.trim();if(name.length<2||name.length>100){setError('Enter 2–100 characters.');return;}if(selected.length>=20){setError('Use up to 20 services per application.');return;}update([...new Set([...selected,name])]);setValue('');setError('');}}>Add manually entered service</button>{selected.map(item=><div key={item}>{!onChange&&<input type="hidden" name="services" value={item}/>}<span>{item}</span><button type="button" className="sales-secondary" aria-label={'Remove manual service '+item} onClick={()=>update(selected.filter(s=>s!==item))}>Remove service</button></div>)}<p>Manually entered services require Owner scope and fee review. Entering a service does not approve its price, outside fees or availability.</p>{error&&<p role="alert">{error}</p>}</div>;
+}

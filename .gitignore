@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/public/stripe-catalog-inventory.json
 /.pnp
 .pnp.*
 .yarn/*

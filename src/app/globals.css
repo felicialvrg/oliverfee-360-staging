@@ -25,3 +25,16 @@
 @media(max-width:600px){.prospect-search{grid-column:auto}}
 .office-top-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .owner-header nav .btn{min-height:36px;padding:6px 12px;color:#221706}
+
+.transportation-services{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 28px;padding-left:22px;overflow-wrap:anywhere}@media(max-width:600px){.transportation-services{grid-template-columns:minmax(0,1fr)}}
+
+.permit-source-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:1rem}.permit-source-grid>*{min-width:0;overflow-wrap:anywhere}.permit-source-grid a{white-space:normal;max-width:100%;box-sizing:border-box}.official-permit-sources summary{cursor:pointer;font-weight:700;margin:1rem 0}
+
+/* Public account entry points never grant a role or bypass portal access checks. */
+.account-entry-links{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:16px 24px;background:var(--panel,#191920);border-bottom:1px solid var(--line,#393943)}
+.account-entry-links a{display:flex;align-items:center;justify-content:center;min-height:44px;padding:10px 12px;border:1px solid var(--line,#393943);border-radius:8px;color:var(--gold,#e4bc69);font-size:14px;font-weight:700;text-align:center;overflow-wrap:anywhere}
+.account-entry-links a:hover{background:var(--line,#393943)}.account-entry-links a:focus-visible{outline:3px solid var(--pink,#d44e9b);outline-offset:2px}
+.auth-wrap .account-entry-links{padding:12px 0;margin:16px 0;background:transparent;border-bottom:0}
+@media(max-width:600px){.account-entry-links{grid-template-columns:repeat(2,minmax(0,1fr));padding:12px 16px}.account-entry-links a{font-size:13px;padding:10px 8px}}
+
+.service-highlight{border-color:#6c3f58;background:linear-gradient(120deg,#211a24,#191920)}.service-highlight h2{color:var(--gold)}.service-feature{padding:20px;border:1px solid #713b57;border-radius:12px;background:#2b1d2b}.service-feature h3{color:#ff9fc8;margin:8px 0}.service-feature p{color:var(--silver)}

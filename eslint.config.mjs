@@ -11,12 +11,17 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  // Synthetic test loaders deliberately provide a CommonJS module object.
+  {files:["tests/**/*.mjs"],rules:{"@next/next/no-assign-module-variable":"off"}},
+  {files:["oliverfee-360/tests/**/*.cjs"],rules:{"@typescript-eslint/no-require-imports":"off"}},
   {
     ignores: [
       "node_modules/**",
       ".next/**",
       "out/**",
       "build/**",
+      ".compensation-review/**",
+      ".master-review/**",
       "next-env.d.ts",
     ],
   },

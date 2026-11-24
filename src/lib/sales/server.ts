@@ -1,4 +1,5 @@
 import 'server-only';
+import {representativeRoster} from './representative-roster';
 import {screeningConfiguration} from './dnc';
 import {SalesInputError} from './input-error';
 import {createClient} from '@/lib/supabase/server';
@@ -24,11 +25,11 @@ export async function actor(management=false){
 }
 export async function salesData(management=false,page=0,query='',status='All'):Promise<SalesData>{
  const who=await actor(management),client=await createClient();
- let list=client.from('sales_prospects').select('*').order('created_at',{ascending:false}).order('id').range(page*30,page*30+30);
+ let list=client.from('sales_prospects').select('*',{count:'exact'}).order('created_at',{ascending:false}).order('id').range(page*30,page*30+29);
  if(!who.owner)list=list.eq('assigned_to',who.id);if(query)list=list.ilike('company_name','%'+query.replace(/[%_\\]/g,'')+'%');
  if(status==='Due')list=list.lte('follow_up_at',new Date().toISOString()).not('disposition','in','("Closed Sale","Do Not Contact","Not Interested")');
  else if((DISPOSITIONS as readonly string[]).includes(status))list=list.eq('disposition',status);
- const {data:prospects,error}=await list;if(error)throw new SalesError('Sales database setup is pending or temporarily unavailable.',503);
+ const {data:prospects,error,count:prospectCount}=await list;if(error)throw new SalesError('Sales database setup is pending or temporarily unavailable.',503);
  const visible=(prospects||[]).slice(0,30) as Prospect[];const ids=visible.map(p=>p.id);
  const {data:applications,error:applicationError}=ids.length?await client.from('sales_applications').select('*').in('prospect_id',ids):{data:[],error:null};
  if(applicationError)throw new SalesError('Applications could not be loaded.',503);
@@ -38,15 +39,16 @@ export async function salesData(management=false,page=0,query='',status='All'):P
   appIds.length?client.from('sales_checkout_attempts').select('id,application_id,status,checkout_url,amount_cents,plan_key').in('application_id',appIds).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null}),
   client.from('sales_commissions').select('id,application_id,rep_id,amount_cents,status').order('created_at',{ascending:false}).limit(100),
   client.from('sales_activity').select('*').order('created_at',{ascending:false}).limit(100),
-  who.owner?client.from('sales_representatives').select('*').order('name').limit(500):Promise.resolve({data:[who.rep],error:null}),
+  who.owner?representativeRoster(client):Promise.resolve({data:[who.rep],error:null}),
   who.owner?client.rpc('sales_management_metrics'):client.rpc('sales_metrics'),
-  who.owner?client.from('sales_outbox').select('id,kind,recipient,status,attempts,last_error').neq('status','sent').order('created_at').limit(100):Promise.resolve({data:[],error:null})
+  who.owner?client.from('sales_outbox').select('id,kind,recipient,status,attempts,last_error').order('created_at',{ascending:false}).limit(100):Promise.resolve({data:[],error:null})
  ]);
  if([resources,checkouts,commissions,activity,reps,metrics,outbox].some(v=>v.error))throw new SalesError('Sales records could not be loaded safely. Retry after database setup.',503);
  const screened=visible.length?await client.rpc('sales_call_permissions',{p_ids:visible.map(p=>p.id)}):{data:[],error:null};const configured=!!screeningConfiguration();const screening=screened.error?visible.map(p=>({id:p.id,allowed:false,status:p.disposition==='Do Not Contact'?'internal-dnc':'unscreened',verified_at:null})):(screened.data||[]).map((s:Record<string,unknown>)=>({...s,allowed:configured&&s.allowed,status:!configured&&s.status==='screened-clear'?'not-connected':s.status}));const slots=who.owner?await client.from('sales_team_slots').select('slot,rep_id').order('slot'):{data:[],error:null};
  const performance=who.owner?await client.rpc('sales_team_performance'):{data:[],error:null};
+ let assignedCount=client.from('sales_prospects').select('id',{count:'exact',head:true});if(!who.owner)assignedCount=assignedCount.eq('assigned_to',who.id);else assignedCount=assignedCount.not('assigned_to','is',null);const assignedTotal=await assignedCount;if(assignedTotal.error||assignedTotal.count===null)throw new SalesError('Assigned lead count unavailable.',503);
  const quoted=appIds.length?await client.from('sales_enrollment_quotes').select('*').in('application_id',appIds).order('created_at',{ascending:false}):{data:[],error:null};
- return {quotes:quoted.data||[],teamPerformance:performance.error?[]:performance.data||[],screening,screeningConfigured:configured,teamSlots:slots.data||[],representative:who.rep,representatives:(reps.data||[]) as Representative[],prospects:visible,applications:(applications||[]) as Application[],checkouts:(checkouts.data||[]) as Checkout[],commissions:(commissions.data||[]) as Commission[],resources:(resources.data||[]) as Resource[],activity:(activity.data||[]) as Activity[],metrics:{...emptyMetrics,...metrics.data},page,hasMore:(prospects||[]).length>30,outbox:outbox.data||[]};
+ return {quotes:quoted.data||[],teamPerformance:performance.error?[]:performance.data||[],screening,screeningConfigured:configured,teamSlots:slots.data||[],representative:who.rep,representatives:(reps.data||[]) as Representative[],prospects:visible,applications:(applications||[]) as Application[],checkouts:(checkouts.data||[]) as Checkout[],commissions:(commissions.data||[]) as Commission[],resources:(resources.data||[]) as Resource[],activity:(activity.data||[]) as Activity[],metrics:{...emptyMetrics,...metrics.data,assignedTotal:assignedTotal.count},page,hasMore:prospectCount!==null&&((page+1)*30<prospectCount),outbox:outbox.data||[]};
 }
 export async function command(action:string,id:string|null,payload:Record<string,unknown>){
  const client=await createClient();const {data,error}=await client.rpc('sales_command',{p_action:action,p_id:id,p_payload:payload});
@@ -56,4 +58,4 @@ export function sameOrigin(request:Request){if(request.headers.get('origin')!==n
 export async function requestBody(request:Request){if(Number(request.headers.get('content-length')||0)>1_600_000)throw new SalesError('Request is too large.',413);const raw=await request.text();if(new TextEncoder().encode(raw).length>1_600_000)throw new SalesError('Request is too large.',413);let data;try{data=JSON.parse(raw);}catch{throw new SalesError('Invalid JSON.');}if(!data||typeof data!=='object'||Array.isArray(data))throw new SalesError('Invalid request.');return data as Record<string,unknown>;}
 export function salesFailure(error:unknown){const e=error instanceof SalesError?error:error instanceof SalesInputError?new SalesError(error.message,400):new SalesError('Sales service is temporarily unavailable.',503);return Response.json({error:e.message},{status:e.status,headers:{'Cache-Control':'no-store'}});}
 
-export async function representativeDestination(id:string){try{const client=await createClient();const {data,error}=await client.from("sales_representatives").select("status").eq("user_id",id).maybeSingle();if(error||!data)return null;return data.status==="active"?"/sales":"/sales/login?error=access";}catch{return null;}}
+export async function representativeDestination(id:string){try{const client=await createClient();const {data,error}=await client.from("sales_representatives").select("status").eq("user_id",id).maybeSingle();if(error||!data)return null;return data.status==="active"?"/sales":data.status==="invited"?"/set-password?portal=sales":"/sales/login?error=access";}catch{return null;}}

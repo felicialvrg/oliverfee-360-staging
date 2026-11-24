@@ -97,7 +97,7 @@ export default async function ProspectsPage({ searchParams }: { searchParams: Pr
       </form>
 
       {error ? (
-        <p className="notice error">Couldn&apos;t reach the DOT data service: {error}. Try again in a minute.</p>
+        <div className="notice error"><p>Couldn&apos;t reach the DOT data service: {error}.</p><a className="btn-secondary" href={`?${query(f)}`}>Retry DOT search</a></div>
       ) : result && (
         <>
           <p className="muted">

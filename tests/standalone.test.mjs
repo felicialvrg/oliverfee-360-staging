@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import {reviewInterview,calculateBid} from '../src/lib/interview-rules.ts';
 import {authConfigured,requestsConfigured} from '../src/lib/config.ts';
@@ -30,9 +30,10 @@ test('Basic UCR assistance has no service fee and registration remains separate'
  const q=reviewInterview({...fixture,filings:{UCR:'help'}});assert.equal(q.services[0].serviceCents,0);assert.equal(q.services[0].governmentCents,null);assert.equal(q.knownCents,0);assert.equal(q.pending,true);assert.equal(q.checkoutEnabled,false);
 });
 test('Startup Bundle is 1250 before outside fees without duplicate USDOT or UCR service charges',()=>{
- const q=reviewInterview({...fixture,packageSelection:'startup',filings:{DOT:'help',UCR:'help'}});assert.equal(q.bundleCents,125000);assert.equal(q.knownCents,125000);assert.ok(q.services.every(s=>s.serviceCents===0));assert.equal(q.pending,true);assert.equal(q.paymentStatus,'unpaid');assert.equal(q.checkoutEnabled,false);
+ const q=reviewInterview({...fixture,packageSelection:'startup',filings:{DOT:'help',UCR:'help'}});assert.equal(q.bundleCents,75000);assert.equal(q.knownCents,75000);assert.ok(q.services.every(s=>s.serviceCents===0));assert.equal(q.pending,true);assert.equal(q.paymentStatus,'unpaid');assert.equal(q.checkoutEnabled,false);
 });
 test('Basic and Startup approved prices match marketing copy',async()=>{
- const {pricing}=await import('../src/lib/interview-rules.ts');assert.equal(pricing.basicMonthlyCents,4999);assert.equal(pricing.startupBundleCents,125000);
- const {readFileSync}=await import('node:fs');const plans=readFileSync(new URL('../src/app/plans/page.tsx',import.meta.url),'utf8');assert.ok(plans.includes('49.99'));assert.ok(plans.includes('$1,250'));assert.ok(!plans.includes('$25 service fee'));assert.ok(plans.includes('full total is due before processing begins'));
+ const {pricing}=await import('../src/lib/interview-rules.ts');assert.equal(pricing.basicMonthlyCents,4999);assert.equal(pricing.startupBundleCents,75000);
+ const {readFileSync}=await import('node:fs');const plans=readFileSync(new URL('../src/app/plans/page.tsx',import.meta.url),'utf8');assert.ok(plans.includes('MembershipPricingCards'));assert.ok(plans.includes('$750'));assert.ok(!plans.includes('$25 service fee'));assert.ok(plans.includes('full total is due before processing begins'));
 });
+

@@ -1,4 +1,9 @@
+import {sendInitialInvitation} from './initial-invitation';
+import {importAssignedLeads} from './import-assigned';
+import {renameRepresentative} from './representative-name';
 import 'server-only';
+import {resendSalesEmail} from './resend-email';
+import {removeRepresentative} from './remove-representative';
 import {screenProspect} from './dnc';
 import {createClient} from '@/lib/supabase/server';
 import {actor,salesData,command,sameOrigin,requestBody,salesFailure,SalesError} from './server';
@@ -9,7 +14,7 @@ import {registerRepresentative,sendCheckoutEmail,drainSalesOutbox} from './notif
 import {DISPOSITIONS} from './types';
 export async function getSales(request:Request,management=false){try{
  await actor(management);const url=new URL(request.url),page=Number(url.searchParams.get('page')||0);if(!Number.isSafeInteger(page)||page<0||page>10000)throw new SalesError('Invalid page.');
- if(url.searchParams.get('export')==='team'){if(!management)throw new SalesError('Owner access required.',403);const client=await createClient();const {data,error}=await client.rpc('sales_team_performance');if(error)throw new SalesError('Team performance report unavailable.',503);const keys=['slot','rep_id','name','rep_code','status','calls_today','assigned_leads','followups_due','applications_submitted','verified_sales','revenue_cents','commission_cents'];const csv=[keys.join(','),...(data||[]).map((r:Record<string,unknown>)=>keys.map(k=>safeCsvCell(r[k])).join(','))].join('\r\n');return new Response(csv,{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="oliverfee-four-person-sales.csv"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
+ if(url.searchParams.get('export')==='team'){if(!management)throw new SalesError('Owner access required.',403);const client=await createClient();const {data,error}=await client.rpc('sales_team_performance');if(error)throw new SalesError('Team performance report unavailable.',503);const keys=['slot','rep_id','name','rep_code','status','calls_today','assigned_leads','followups_due','applications_submitted','verified_sales','revenue_cents','commission_cents'];const csv=[keys.join(','),...(data||[]).map((r:Record<string,unknown>)=>keys.map(k=>safeCsvCell(r[k])).join(','))].join('\r\n');return new Response(csv,{headers:{'Content-Type':'text/csv; charset=utf-8','Content-Disposition':'attachment; filename="oliverfee-five-person-sales.csv"','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
  if(url.searchParams.get('export')==='csv'){
   if(!management)throw new SalesError('Owner access required.',403);
   const client=await createClient(),rows:Record<string,unknown>[]=[];let total=1;
@@ -33,14 +38,20 @@ export async function postSales(request:Request,management=false){try{
  else if(action==='dnc-optout')result=await command(action,uuid(raw.id),{reason:text(raw.reason,500)});
  else if(action==='prospect-notes')result=await command(action,uuid(raw.id),{notes:text(raw.notes,4000),follow_up_at:raw.follow_up_at?new Date(String(raw.follow_up_at)).toISOString():null,revision:raw.revision});
  else if(action==='call')result=await command('call',uuid(raw.id),callPayload(raw));
+ else if(action==='manual-call-start'){if(management)throw new SalesError('An assigned salesperson is required.',403);const client=await createClient();const {data,error}=await client.rpc('sales_start_manual_call',{p_id:uuid(raw.id)});if(error)throw new SalesError('Manual call attempt could not be recorded.',409);result=data;}
  else if(action==='save-application')result=await command(action,uuid(raw.id),applicationPayload(raw));
  else if(action==='checkout')result=await generateCheckout(uuid(raw.id));
  else if(action==='email-checkout')result=await sendCheckoutEmail(uuid(raw.id));
  else{
   if(!management)throw new SalesError('This is an owner-only sales action.',403);
-  if(action==='owner-enrollment')result=await command(action,raw.id?uuid(raw.id):null,applicationPayload(raw));
+  if(action==='import-assigned')result=await importAssignedLeads(raw.csv,raw.rep_id);
+  else if(action==='rep-rename')result=await renameRepresentative(raw.id,raw.name);
+  else if(action==='resend-invite')result=await resendSalesEmail(raw.id,true);
+  else if(action==='resend-email')result=await resendSalesEmail(raw.id);
+  else if(action==='remove-rep')result=await removeRepresentative(raw.id);
+  else if(action==='owner-enrollment')result=await command(action,raw.id?uuid(raw.id):null,applicationPayload(raw));
   else if(action==='quote-approve'||action==='quote-reject'){const notes=text(raw.notes,2000);if(notes.length<3)throw new SalesError('Owner review notes required.');result=await command(action,uuid(raw.id),{notes,resolutions:raw.resolutions||{}});}
-  else if(action==='register-rep'){const representative=await registerRepresentative(raw);result={representative,notifications:await drainSalesOutbox()};}
+  else if(action==='register-rep'){const representative=await registerRepresentative(raw) as {user_id:string};const notifications=await sendInitialInvitation(representative.user_id);result={representative,notifications,invitationStatus:notifications.sent===1||'alreadySent' in notifications&&notifications.alreadySent?'sent':notifications.failed?'failed':'unknown'};}
   else if(action==='rep-update'){
    const status=text(raw.status),mode=text(raw.commission_mode),value=Number(raw.commission_value);if(!['invited','active','suspended','inactive'].includes(status)||!['none','percent','flat'].includes(mode)||!Number.isSafeInteger(value)||value<0||value>1000000||mode==='percent'&&value>10000)throw new SalesError('Invalid representative status or commission settings.');
    result=await command(action,uuid(raw.id),{status,commission_mode:mode,commission_value:mode==='none'?0:value});
@@ -59,3 +70,5 @@ export async function postSales(request:Request,management=false){try{
  }
  return Response.json({ok:true,result},{headers:{'Cache-Control':'no-store'}});
  }catch(e){return salesFailure(e);}}
+
+

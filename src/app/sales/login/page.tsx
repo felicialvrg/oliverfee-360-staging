@@ -1,5 +1,5 @@
-import {redirect} from 'next/navigation';
 import SalesLogin from '@/components/sales/login-form';
-import {salesEntryDestination} from '@/lib/sales/server';
 export const dynamic='force-dynamic';
-export default async function SalesLoginPage(){const destination=await salesEntryDestination();if(destination)redirect(destination);return <SalesLogin/>;}
+// The explicit login entry always requires the password form, even with a session.
+// Private workspace guards continue to enforce the authenticated account's role.
+export default function SalesLoginPage(){return <SalesLogin/>;}
